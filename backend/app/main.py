@@ -1,6 +1,6 @@
 # =============================================================================
 # HexShield AI — FastAPI Application Entry Point
-# Step 5: API Framework
+# API Framework
 #
 # This is the root of the backend application. It:
 #   - Creates and configures the FastAPI app instance

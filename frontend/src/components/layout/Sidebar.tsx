@@ -15,48 +15,24 @@ import {
   FileText,
   Users,
   Activity,
+  LogOut,
+  User,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const NAV_ITEMS = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Cases",
-    href: "/dashboard/cases",
-    icon: FolderOpen,
-  },
-  {
-    label: "Submit Evidence",
-    href: "/dashboard/submit",
-    icon: Upload,
-  },
-  {
-    label: "Analysis",
-    href: "/dashboard/analysis",
-    icon: Cpu,
-  },
-  {
-    label: "Reports",
-    href: "/dashboard/reports",
-    icon: FileText,
-  },
-  {
-    label: "Investigators",
-    href: "/dashboard/investigators",
-    icon: Users,
-  },
-  {
-    label: "System Health",
-    href: "/dashboard/health",
-    icon: Activity,
-  },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Cases", href: "/dashboard/cases", icon: FolderOpen },
+  { label: "Submit Evidence", href: "/dashboard/submit", icon: Upload },
+  { label: "Analysis", href: "/dashboard/analysis", icon: Cpu },
+  { label: "Reports", href: "/dashboard/reports", icon: FileText },
+  { label: "Investigators", href: "/dashboard/investigators", icon: Users },
+  { label: "System Health", href: "/dashboard/health", icon: Activity },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { investigator, logout } = useAuth();
 
   return (
     <aside
@@ -80,13 +56,7 @@ export default function Sidebar() {
           borderBottom: "1px solid var(--card-border)",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.75rem",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           <div
             style={{
               width: 36,
@@ -154,12 +124,87 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* Logged-in User Info */}
+      {investigator && (
+        <div
+          style={{
+            padding: "1rem 1.25rem",
+            borderTop: "1px solid var(--card-border)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.625rem",
+              marginBottom: "0.75rem",
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                background: "rgba(59,130,246,0.15)",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <User size={16} color="var(--primary)" />
+            </div>
+            <div style={{ overflow: "hidden" }}>
+              <div
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: 600,
+                  color: "var(--foreground)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {investigator.full_name}
+              </div>
+              <div
+                style={{
+                  fontSize: "0.6875rem",
+                  color: "var(--muted)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {investigator.badge_number || investigator.role}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={logout}
+            className="sidebar-link"
+            style={{
+              width: "100%",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--danger)",
+              justifyContent: "flex-start",
+            }}
+          >
+            <LogOut size={16} />
+            Sign Out
+          </button>
+        </div>
+      )}
+
       {/* Footer */}
       <div
         style={{
-          padding: "1rem 1.25rem",
+          padding: "0.75rem 1.25rem",
           borderTop: "1px solid var(--card-border)",
-          fontSize: "0.75rem",
+          fontSize: "0.6875rem",
           color: "var(--muted)",
         }}
       >

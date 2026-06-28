@@ -4,11 +4,24 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
-  async rewrites() {
+  async headers() {
     return [
       {
-        source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
       },
     ];
   },

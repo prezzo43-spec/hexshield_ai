@@ -303,7 +303,7 @@ python -m pytest tests/test_hex_engine.py -v
 
 ## Development Team
 
-Capstone research project — Strathmore University / University of Nairobi
+Capstone research project — Open university of Kenya
 
 ---
 

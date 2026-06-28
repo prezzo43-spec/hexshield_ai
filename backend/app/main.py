@@ -97,10 +97,11 @@ app = FastAPI(
 # -----------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins_list,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
@@ -139,9 +140,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Each router handles one domain of the API.
 # Imported here and registered with a prefix and tags.
 # -----------------------------------------------------------------------------
-from app.routers import health, investigators, cases, submissions, analysis, reports
+from app.routers import health, investigators, cases, submissions, analysis, reports, auth
 
 app.include_router(health.router, prefix="/api", tags=["Health"])
+app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
 app.include_router(investigators.router, prefix="/api/v1", tags=["Investigators"])
 app.include_router(cases.router, prefix="/api/v1", tags=["Cases"])
 app.include_router(submissions.router, prefix="/api/v1", tags=["File Submissions"])

@@ -2,9 +2,9 @@
 # HexShield AI — AI Engine Orchestrator
 # Layer 2: Multimodal AI Deepfake Detection Engine
 #
-# Main entry point for Layer 2 analysis.
-# Routes files to the correct analyzer based on media type detection.
-# Coordinates image, video, and audio analysis pipelines.
+# Routes files to the correct analyzer based on media type.
+# Uses Hugging Face API for real deepfake detection.
+# Falls back to classical analysis if HF API is unavailable.
 # =============================================================================
 
 import time
@@ -12,38 +12,22 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from app.services.ai_engine.model_base import AIAnalysisResult
-from app.services.ai_engine.image_analyzer import ImageDeepfakeAnalyzer
-from app.services.ai_engine.video_analyzer import VideoDeepfakeAnalyzer
-from app.services.ai_engine.audio_analyzer import AudioDeepfakeAnalyzer
+from app.services.ai_engine.model_base import AIAnalysisResult, determine_ai_verdict
+from app.services.ai_engine.huggingface_analyzer import (
+    HuggingFaceDeepfakeAnalyzer,
+    IMAGE_EXTENSIONS,
+    VIDEO_EXTENSIONS,
+    AUDIO_EXTENSIONS,
+)
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# MEDIA TYPE ROUTING
-# =============================================================================
-
-IMAGE_EXTENSIONS = {
-    ".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tiff", ".tif"
-}
-
-VIDEO_EXTENSIONS = {
-    ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".webm"
-}
-
-AUDIO_EXTENSIONS = {
-    ".mp3", ".wav", ".flac", ".ogg", ".m4a", ".aac", ".wma"
-}
-
-
 def detect_media_type(filename: str) -> Optional[str]:
     """
     Determine media type from file extension.
-
-    Returns:
-        'IMAGE' | 'VIDEO' | 'AUDIO' | None
+    Returns: 'IMAGE' | 'VIDEO' | 'AUDIO' | None
     """
     ext = Path(filename).suffix.lower()
     if ext in IMAGE_EXTENSIONS:
@@ -55,87 +39,36 @@ def detect_media_type(filename: str) -> Optional[str]:
     return None
 
 
-# =============================================================================
-# AI ENGINE ORCHESTRATOR
-# =============================================================================
-
 class AIDeepfakeEngine:
     """
     Layer 2: Multimodal AI Deepfake Detection Engine.
-
-    Routes files to the appropriate analyzer:
-      - Images  -> ImageDeepfakeAnalyzer (ELA, noise, compression, faces)
-      - Videos  -> VideoDeepfakeAnalyzer (frame analysis, temporal consistency)
-      - Audio   -> AudioDeepfakeAnalyzer (MFCC, spectral, voice synthesis)
-
-    Usage:
-        engine = AIDeepfakeEngine()
-        result = engine.analyze_file(file_path)
-        result = engine.analyze_bytes(data, filename)
+    Uses Hugging Face Inference API for real deepfake detection.
     """
 
     def __init__(self, inference_device: str = None):
         self.inference_device = (
             inference_device or settings.AI_INFERENCE_DEVICE
         )
-        self._image_analyzer = None
-        self._video_analyzer = None
-        self._audio_analyzer = None
+        self._hf_analyzer = None
         logger.info(
             f"AIDeepfakeEngine initialized — device={self.inference_device}"
         )
 
-    # -------------------------------------------------------------------------
-    # Lazy Initialization — Analyzers loaded on first use
-    # -------------------------------------------------------------------------
-
     @property
-    def image_analyzer(self) -> ImageDeepfakeAnalyzer:
-        if self._image_analyzer is None:
-            self._image_analyzer = ImageDeepfakeAnalyzer(
-                self.inference_device
-            )
-        return self._image_analyzer
-
-    @property
-    def video_analyzer(self) -> VideoDeepfakeAnalyzer:
-        if self._video_analyzer is None:
-            self._video_analyzer = VideoDeepfakeAnalyzer(
-                self.inference_device
-            )
-        return self._video_analyzer
-
-    @property
-    def audio_analyzer(self) -> AudioDeepfakeAnalyzer:
-        if self._audio_analyzer is None:
-            self._audio_analyzer = AudioDeepfakeAnalyzer(
-                self.inference_device
-            )
-        return self._audio_analyzer
-
-    # -------------------------------------------------------------------------
-    # PUBLIC — Main Analysis Entry Points
-    # -------------------------------------------------------------------------
+    def hf_analyzer(self) -> HuggingFaceDeepfakeAnalyzer:
+        if self._hf_analyzer is None:
+            self._hf_analyzer = HuggingFaceDeepfakeAnalyzer()
+        return self._hf_analyzer
 
     def analyze_file(
         self,
         file_path: str,
         declared_mime_type: Optional[str] = None,
     ) -> AIAnalysisResult:
-        """
-        Analyze a file from disk path.
-
-        Args:
-            file_path          : Path to the file on disk
-            declared_mime_type : Optional declared MIME type
-
-        Returns:
-            AIAnalysisResult with deepfake detection findings
-        """
+        """Analyze a file from disk path."""
         path = Path(file_path)
         if not path.exists():
             return self._file_not_found_result(str(path.name))
-
         file_bytes = path.read_bytes()
         return self.analyze_bytes(file_bytes, path.name)
 
@@ -144,38 +77,44 @@ class AIDeepfakeEngine:
         data: bytes,
         filename: str,
     ) -> AIAnalysisResult:
-        """
-        Analyze raw bytes directly.
-
-        Args:
-            data     : Raw file bytes
-            filename : Original filename for type detection
-
-        Returns:
-            AIAnalysisResult with deepfake detection findings
-        """
+        """Analyze raw bytes directly."""
         media_type = detect_media_type(filename)
 
         if media_type is None:
             return self._unsupported_media_result(filename)
 
         logger.info(
-            f"AIDeepfakeEngine: Routing {filename} to "
-            f"{media_type} analyzer."
+            f"AIDeepfakeEngine: Routing {filename} "
+            f"({media_type}) to HF analyzer."
         )
 
-        if media_type == "IMAGE":
-            return self.image_analyzer.analyze(data, filename)
-        elif media_type == "VIDEO":
-            return self.video_analyzer.analyze(data, filename)
-        elif media_type == "AUDIO":
-            return self.audio_analyzer.analyze(data, filename)
+        # Run Hugging Face analysis
+        result_dict = self.hf_analyzer.analyze(data, filename)
 
-        return self._unsupported_media_result(filename)
-
-    # -------------------------------------------------------------------------
-    # PRIVATE — Error Results
-    # -------------------------------------------------------------------------
+        # Convert dict result to AIAnalysisResult
+        return AIAnalysisResult(
+            media_type=result_dict.get("media_type", media_type),
+            authenticity_score=result_dict.get("authenticity_score", 0.0),
+            manipulation_confidence=result_dict.get("manipulation_confidence", 0.0),
+            verdict=result_dict.get("verdict", "INCONCLUSIVE"),
+            model_name=result_dict.get("model_name", "HexShield-AI-Engine"),
+            model_version=result_dict.get("model_version", "1.0.0"),
+            face_regions_detected=result_dict.get("face_regions_detected"),
+            compression_artifact_score=result_dict.get("compression_artifact_score"),
+            noise_pattern_anomaly_score=result_dict.get("noise_pattern_anomaly_score"),
+            ela_anomaly_score=result_dict.get("ela_anomaly_score"),
+            total_frames_analyzed=result_dict.get("total_frames_analyzed"),
+            temporal_inconsistency_score=result_dict.get("temporal_inconsistency_score"),
+            temporal_inconsistencies=result_dict.get("temporal_inconsistencies"),
+            total_segments_analyzed=result_dict.get("total_segments_analyzed"),
+            spectral_analysis=result_dict.get("spectral_analysis"),
+            voice_synthesis_score=result_dict.get("voice_synthesis_score"),
+            frame_details=result_dict.get("frame_details", []),
+            processing_duration_ms=result_dict.get("processing_duration_ms"),
+            inference_device=self.inference_device,
+            analysis_notes=result_dict.get("analysis_notes", []),
+            errors=result_dict.get("errors", []),
+        )
 
     def _unsupported_media_result(self, filename: str) -> AIAnalysisResult:
         ext = Path(filename).suffix.lower()
@@ -188,10 +127,7 @@ class AIDeepfakeEngine:
             model_version="1.0.0",
             analysis_notes=[
                 f"Unsupported media type: '{ext}'. "
-                f"Supported formats: "
-                f"Images ({', '.join(IMAGE_EXTENSIONS)}), "
-                f"Video ({', '.join(VIDEO_EXTENSIONS)}), "
-                f"Audio ({', '.join(AUDIO_EXTENSIONS)})."
+                f"Supported: images, video, audio."
             ],
             errors=[f"Unsupported media type: {ext}"],
         )

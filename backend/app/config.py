@@ -61,6 +61,7 @@ class Settings(BaseSettings):
     AI_MODEL_WEIGHTS_DIR: str = "app/services/ai_engine/weights"
     AI_CONFIDENCE_THRESHOLD: float = 0.75
     AI_INFERENCE_DEVICE: str = "cpu"
+    HUGGINGFACE_API_TOKEN: str = ""
 
     # -------------------------------------------------------------------------
     # Layer 3 — Forensic Reporting

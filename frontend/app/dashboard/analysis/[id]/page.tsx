@@ -121,13 +121,20 @@ export default function AnalysisDetailPage() {
     setActionError("");
     setActionSuccess("");
     try {
+      console.log("Generating report for submission:", submissionId, "format:", format);
       const res = await generateReport(submissionId, format);
+      console.log("Report generated:", res);
       setActionSuccess(
-        `${format} report generated. Hash: ${res.report_hash.slice(0, 16)}...`
+        `${format} report generated successfully. File: ${res.report_filename}`
       );
       fetchAll();
     } catch (e: any) {
-      setActionError(e?.response?.data?.detail || "Report generation failed.");
+      console.error("Report generation error:", e);
+      setActionError(
+        e?.response?.data?.detail ||
+        e?.message ||
+        "Report generation failed. Check console for details."
+      );
     } finally {
       setGeneratingReport(false);
     }
@@ -573,18 +580,13 @@ export default function AnalysisDetailPage() {
                     </div>
                   </div>
                   
-                    href={getReportDownloadUrl(r.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    <button
                     className="btn btn-outline"
-                    style={{
-                      padding: "0.25rem 0.75rem",
-                      fontSize: "0.8125rem",
-                    }}
+                    onClick={() => window.open(getReportDownloadUrl(r.id), "_blank")}
                   >
                     <Download size={13} />
                     Download
-                  </a>
+                  </button>
                 </div>
               ))}
             </div>

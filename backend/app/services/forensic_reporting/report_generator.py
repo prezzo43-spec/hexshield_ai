@@ -210,7 +210,7 @@ class ForensicReportAssembler:
                 risk_summary=hex_row["risk_summary"],
                 magic_bytes_extracted=hex_row["magic_bytes_extracted"],
                 suspicious_sections_count=len(
-                    json.loads(hex_row.get("suspicious_sections_json") or "[]")
+                    hex_row.get("suspicious_sections_json") or []
                 ),
                 engine_version=hex_row["engine_version"],
                 analyzed_at=str(hex_row["analyzed_at"]),

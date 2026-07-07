@@ -1,0 +1,144 @@
+{
+  "evaluation_title": "HexShield AI \u2014 Framework Evaluation Report",
+  "framework": "Layer 1: Hex-Level Binary Triage Engine",
+  "evaluation_standard": "ISO/IEC 27037 Digital Evidence Standards",
+  "jurisdiction": "Republic of Kenya",
+  "test_dataset_size": 10,
+  "metrics": {
+    "accuracy_percent": 90.0,
+    "precision_percent": 87.5,
+    "recall_percent": 100.0,
+    "f1_score_percent": 93.33,
+    "false_positive_rate_percent": 33.33,
+    "false_negative_rate_percent": 0.0,
+    "specificity_percent": 66.67
+  },
+  "confusion_matrix": {
+    "TP": 7,
+    "TN": 2,
+    "FP": 1,
+    "FN": 0
+  },
+  "per_file_results": [
+    {
+      "filename": "mime_spoof_exe.jpg",
+      "category": "MIME Spoof",
+      "description": "EXE disguised as JPG",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 4.106959,
+      "mime_spoof_detected": true,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "mime_spoof_pdf.png",
+      "category": "MIME Spoof",
+      "description": "PDF disguised as PNG",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 4.585299,
+      "mime_spoof_detected": true,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "high_entropy_block.bin",
+      "category": "High Entropy",
+      "description": "Encrypted/packed payload",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 7.951753,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 15
+    },
+    {
+      "filename": "mixed_entropy.bin",
+      "category": "Mixed Threat",
+      "description": "Normal header + encrypted body",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "MALICIOUS",
+      "shannon_entropy": 7.713255,
+      "mime_spoof_detected": true,
+      "analysis_duration_ms": 14
+    },
+    {
+      "filename": "elf_binary.bin",
+      "category": "Executable",
+      "description": "ELF Linux executable",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 4.65608,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "ole2_document.doc",
+      "category": "Macro Document",
+      "description": "OLE2 macro-capable document",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 4.66887,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "null_header.bin",
+      "category": "Header Anomaly",
+      "description": "Null byte header anomaly",
+      "ground_truth": "MALICIOUS",
+      "predicted": "DETECTED",
+      "correct": true,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 4.490159,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "clean_image.jpg",
+      "category": "Benign",
+      "description": "Legitimate JPEG image",
+      "ground_truth": "CLEAN",
+      "predicted": "CLEAN",
+      "correct": true,
+      "risk_level": "CLEAN",
+      "shannon_entropy": 4.627821,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "clean_pdf.pdf",
+      "category": "Benign",
+      "description": "Legitimate PDF document",
+      "ground_truth": "CLEAN",
+      "predicted": "DETECTED",
+      "correct": false,
+      "risk_level": "SUSPICIOUS",
+      "shannon_entropy": 4.979624,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 0
+    },
+    {
+      "filename": "low_entropy_text.txt",
+      "category": "Benign",
+      "description": "Plain text file",
+      "ground_truth": "CLEAN",
+      "predicted": "CLEAN",
+      "correct": true,
+      "risk_level": "UNKNOWN",
+      "shannon_entropy": 4.441347,
+      "mime_spoof_detected": false,
+      "analysis_duration_ms": 0
+    }
+  ]
+}

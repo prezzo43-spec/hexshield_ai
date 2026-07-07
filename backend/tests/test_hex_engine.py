@@ -149,9 +149,9 @@ class TestShannonEntropy:
         Section analysis must identify high-entropy sections
         within a file that has mixed entropy content.
         """
-        import os
         low_part = b"A" * 1024
-        high_part = os.urandom(1024)
+        # Use deterministic uniform high-entropy data to avoid flaky test behavior.
+        high_part = bytes([i % 256 for i in range(1024)])
         mixed = low_part + high_part
 
         sections = analyze_file_sections(

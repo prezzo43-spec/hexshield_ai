@@ -5,6 +5,7 @@
 # backend application.
 # =============================================================================
 
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
 from typing import List
@@ -47,6 +48,8 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "storage/uploads"
     REPORTS_DIR: str = "storage/reports"
     MAX_UPLOAD_SIZE_MB: int = 500
+    ALLOWED_UPLOAD_EXTENSIONS: str = ".jpg,.jpeg,.png,.bmp,.webp,.tiff,.tif,.pdf,.txt,.json,.csv,.log,.mp4,.mov,.avi,.wav,.mp3,.flac,.docx,.doc"
+    ALLOWED_UPLOAD_MIME_PREFIXES: str = "image/,video/,audio/,application/pdf,application/msword,application/vnd.openxmlformats-officedocument,text/,application/json,application/csv,application/octet-stream"
 
     # -------------------------------------------------------------------------
     # Layer 1 — Hex Triage Engine
@@ -62,6 +65,16 @@ class Settings(BaseSettings):
     AI_CONFIDENCE_THRESHOLD: float = 0.75
     AI_INFERENCE_DEVICE: str = "cpu"
     HUGGINGFACE_API_TOKEN: str = ""
+
+    # -------------------------------------------------------------------------
+    # Security
+    # -------------------------------------------------------------------------
+    ALLOWED_HOSTS: str = "localhost,127.0.0.1"
+    ALLOWED_MODEL_WEIGHTS_HASHES: str = ""
+    MODEL_WEIGHTS_PUBLIC_KEY_PATH: str = "app/services/ai_engine/weights/model_weights_pubkey.pem"
+    MODEL_WEIGHTS_SIGNATURE_EXTENSION: str = ".sig"
+    MAX_REQUEST_BODY_SIZE_MB: int = 520
+    MAX_FORM_FIELDS: int = 100
 
     # -------------------------------------------------------------------------
     # Layer 3 — Forensic Reporting
@@ -113,12 +126,52 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> List[str]:
         """Parse comma-separated ALLOWED_ORIGINS into a Python list."""
-        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+    @property
+    def allowed_hosts_list(self) -> List[str]:
+        """Parse comma-separated ALLOWED_HOSTS into a Python list."""
+        return [host.strip() for host in self.ALLOWED_HOSTS.split(",") if host.strip()]
+
+    @property
+    def allowed_model_weights_hashes(self) -> List[str]:
+        """Parse comma-separated trusted model weight hashes."""
+        return [hash_value.strip() for hash_value in self.ALLOWED_MODEL_WEIGHTS_HASHES.split(",") if hash_value.strip()]
+
+    @property
+    def allowed_upload_extensions(self) -> List[str]:
+        """Parse comma-separated allowed upload file extensions."""
+        return [ext.strip().lower() for ext in self.ALLOWED_UPLOAD_EXTENSIONS.split(",") if ext.strip()]
+
+    @property
+    def allowed_upload_mime_prefixes(self) -> List[str]:
+        """Parse comma-separated allowed upload MIME type prefixes."""
+        return [mime.strip().lower() for mime in self.ALLOWED_UPLOAD_MIME_PREFIXES.split(",") if mime.strip()]
+
+    @property
+    def model_weights_public_key_path(self) -> Path:
+        """Path to the trusted public key used for verifying model weights."""
+        return Path(self.MODEL_WEIGHTS_PUBLIC_KEY_PATH)
+
+    @property
+    def model_weights_signature_extension(self) -> str:
+        """File extension expected for model weight signature files."""
+        return self.MODEL_WEIGHTS_SIGNATURE_EXTENSION
 
     @property
     def max_upload_size_bytes(self) -> int:
         """Convert MAX_UPLOAD_SIZE_MB to bytes for file validation."""
         return self.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+
+    @property
+    def max_request_body_size_bytes(self) -> int:
+        """Convert MAX_REQUEST_BODY_SIZE_MB to bytes for request validation."""
+        return self.MAX_REQUEST_BODY_SIZE_MB * 1024 * 1024
+
+    @property
+    def max_form_fields(self) -> int:
+        """Maximum allowed form fields in a single request."""
+        return self.MAX_FORM_FIELDS
 
     @property
     def is_production(self) -> bool:

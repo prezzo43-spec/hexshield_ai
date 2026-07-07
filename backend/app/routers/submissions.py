@@ -6,9 +6,15 @@
 
 import uuid
 import hashlib
-import os
+import logging
+import mimetypes
 from pathlib import Path
 from typing import Optional
+
+try:
+    import magic
+except ImportError:
+    magic = None
 
 from fastapi import (
     APIRouter,
@@ -17,6 +23,7 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    Request,
     status,
 )
 from sqlalchemy.orm import Session
@@ -26,6 +33,8 @@ from app.database import get_db
 from app.config import settings
 
 router = APIRouter()
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -43,9 +52,11 @@ def compute_sha512(data: bytes) -> str:
 def sanitize_filename(original: str) -> str:
     """
     Generate a safe internal storage filename using UUID.
-    Preserves the original file extension.
+    Preserves only a normalized extension.
     """
     ext = Path(original).suffix.lower()
+    if not ext.isalnum() and ext not in {".jpg", ".jpeg", ".png", ".bmp", ".pdf", ".mp4", ".wav", ".txt"}:
+        ext = ""
     return f"{uuid.uuid4()}{ext}"
 
 
@@ -54,9 +65,14 @@ def save_file_to_storage(data: bytes, stored_filename: str) -> str:
     Save file bytes to the configured upload directory.
     Returns the full storage path.
     """
-    upload_dir = Path(settings.UPLOAD_DIR)
+    upload_dir = Path(settings.UPLOAD_DIR).resolve()
     upload_dir.mkdir(parents=True, exist_ok=True)
-    storage_path = upload_dir / stored_filename
+    storage_path = (upload_dir / stored_filename).resolve()
+    if upload_dir not in storage_path.parents and storage_path != upload_dir:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid storage path detected.",
+        )
     storage_path.write_bytes(data)
     return str(storage_path)
 
@@ -77,12 +93,92 @@ def validate_file_size(file_size: int) -> None:
         )
 
 
+def validate_upload_type(
+    original_filename: str,
+    declared_mime: Optional[str],
+    detected_mime: Optional[str],
+) -> None:
+    """
+    Validate uploaded file type before processing.
+    """
+    ext = Path(original_filename).suffix.lower()
+    if ext and ext not in settings.allowed_upload_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Unsupported file extension: '{ext}'. "
+                f"Allowed extensions: {settings.allowed_upload_extensions}."
+            ),
+        )
+
+    if detected_mime:
+        mime = detected_mime.lower()
+        if not any(mime.startswith(prefix) for prefix in settings.allowed_upload_mime_prefixes):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Unsupported uploaded file type: '{detected_mime}'. "
+                    f"Allowed MIME prefixes: {settings.allowed_upload_mime_prefixes}."
+                ),
+            )
+
+    if declared_mime and detected_mime and declared_mime != detected_mime:
+        logger.warning(
+            "MIME type mismatch for uploaded file %s: declared=%s detected=%s",
+            original_filename,
+            declared_mime,
+            detected_mime,
+        )
+
+
+def validate_content_length(request: Request) -> None:
+    """
+    Validate the Content-Length header before reading the upload.
+    """
+    content_length = request.headers.get("content-length")
+    if content_length is None:
+        return
+
+    try:
+        length_value = int(content_length)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Content-Length header.",
+        )
+
+    if length_value < 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Content-Length header. Value must be non-negative.",
+        )
+
+    if length_value > settings.max_request_body_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"Declared upload size {length_value} bytes exceeds maximum "
+                f"allowed size of {settings.MAX_REQUEST_BODY_SIZE_MB} MB."
+            ),
+        )
+
+    if length_value > settings.max_upload_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"Declared upload size {length_value} bytes exceeds maximum "
+                f"allowed file upload size of {settings.MAX_UPLOAD_SIZE_MB} MB."
+            ),
+        )
+
+
 # =============================================================================
 # ENDPOINTS
 # =============================================================================
 
 @router.post("/cases/{case_id}/submissions", status_code=status.HTTP_201_CREATED)
 async def submit_file(
+    request: Request,
     case_id: str,
     file: UploadFile = File(...),
     submitted_by: str = Form(...),
@@ -146,7 +242,8 @@ async def submit_file(
             detail=f"Investigator {submitted_by} not found or inactive.",
         )
 
-    # Step 3 — Read file bytes and validate size
+    # Step 3 — Validate upload metadata before reading bytes
+    validate_content_length(request)
     file_bytes = await file.read()
     validate_file_size(len(file_bytes))
 
@@ -156,7 +253,39 @@ async def submit_file(
             detail="Submitted file is empty. Zero-byte files cannot be ingested.",
         )
 
-    # Step 4 — Compute cryptographic hashes at ingestion
+    original_filename = file.filename or "unknown_file"
+
+    # Step 4 — Inspect MIME type from content for additional validation
+    declared_mime = file.content_type or None
+    detected_mime = None
+    if magic is not None:
+        try:
+            detected_mime = magic.from_buffer(file_bytes, mime=True)
+        except Exception as exc:
+            logger.warning(
+                "Unable to detect MIME type for submitted file %s: %s",
+                original_filename,
+                exc,
+            )
+    else:
+        detected_mime = mimetypes.guess_type(original_filename)[0]
+        logger.info(
+            "magic library unavailable; using filename-based MIME detection for %s: %s",
+            original_filename,
+            detected_mime,
+        )
+
+    validate_upload_type(original_filename, declared_mime, detected_mime)
+
+    if declared_mime and detected_mime and declared_mime != detected_mime:
+        logger.warning(
+            "MIME type mismatch for %s: declared=%s detected=%s",
+            original_filename,
+            declared_mime,
+            detected_mime,
+        )
+
+    # Step 5 — Compute cryptographic hashes at ingestion
     sha256_hash = compute_sha256(file_bytes)
     sha512_hash = compute_sha512(file_bytes)
 
@@ -233,6 +362,7 @@ async def submit_file(
             "file_extension": file_extension,
             "file_size_bytes": len(file_bytes),
             "mime_type_declared": declared_mime,
+            "mime_type_detected": detected_mime,
             "sha256_hash": sha256_hash,
             "sha512_hash": sha512_hash,
             "storage_path": storage_path,

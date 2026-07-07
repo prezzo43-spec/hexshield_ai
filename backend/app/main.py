@@ -95,18 +95,79 @@ app = FastAPI(
 # CORS Middleware
 # Allows the Next.js frontend to communicate with this API.
 # -----------------------------------------------------------------------------
-import os
-raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
-allowed_origins = [o.strip() for o in raw_origins.split(",")]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=settings.allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"],
+    max_age=600,
 )
+
+
+def _strip_host_port(host: str) -> str:
+    return host.split(":", 1)[0].strip()
+
+
+def _is_allowed_host(host: str) -> bool:
+    host_value = _strip_host_port(host)
+    if not host_value:
+        return False
+    if host_value in settings.allowed_hosts_list:
+        return True
+    return False
+
+
+# -----------------------------------------------------------------------------
+# Host Header Validation Middleware
+# Reject requests with disallowed or malformed Host headers.
+# -----------------------------------------------------------------------------
+@app.middleware("http")
+async def validate_host_header(request: Request, call_next):
+    host_header = request.headers.get("host", "")
+    if not _is_allowed_host(host_header):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_host_header",
+                "message": "The Host header is not allowed or is malformed.",
+            },
+        )
+
+    if request.url.scheme not in {"http", "https"}:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "invalid_request_scheme",
+                "message": "Only HTTP and HTTPS requests are allowed.",
+            },
+        )
+
+    if request.headers.get("content-length"):
+        try:
+            length_value = int(request.headers["content-length"])
+        except ValueError:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": "invalid_content_length",
+                    "message": "Invalid Content-Length header.",
+                },
+            )
+        if length_value > settings.max_request_body_size_bytes:
+            return JSONResponse(
+                status_code=413,
+                content={
+                    "error": "request_entity_too_large",
+                    "message": (
+                        f"Request body size {length_value} exceeds the maximum "
+                        f"allowed size of {settings.MAX_REQUEST_BODY_SIZE_MB} MB."
+                    ),
+                },
+            )
+
+    return await call_next(request)
 
 
 # -----------------------------------------------------------------------------
@@ -119,6 +180,14 @@ async def add_process_time_header(request: Request, call_next):
     response = await call_next(request)
     process_time = (time.monotonic() - start_time) * 1000
     response.headers["X-Process-Time-Ms"] = f"{process_time:.2f}"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if settings.is_production:
+        response.headers[
+            "Strict-Transport-Security"
+        ] = "max-age=31536000; includeSubDomains; preload"
     return response
 
 

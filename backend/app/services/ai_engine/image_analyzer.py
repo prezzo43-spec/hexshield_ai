@@ -30,6 +30,10 @@ from app.services.ai_engine.model_base import (
     determine_ai_verdict,
 )
 from app.config import settings
+from app.services.ai_engine.model_validation import (
+    compute_sha256_hash,
+    is_trusted_model_weights,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +68,32 @@ class ImageDeepfakeAnalyzer(BaseMediaAnalyzer):
     def __init__(self, inference_device: str = "cpu"):
         super().__init__(inference_device)
         self._deep_model = None
+        self._weights_hash: Optional[str] = None
         self._try_load_deep_model()
+
+    def _compute_file_hash(self, weights_path: Path) -> str:
+        hasher = hashlib.sha256()
+        with weights_path.open("rb") as weights_file:
+            for chunk in iter(lambda: weights_file.read(8192), b""):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
+    def _is_trusted_model_weights(self, weights_path: Path) -> bool:
+        self._weights_hash = self._compute_file_hash(weights_path)
+        trusted_hashes = settings.allowed_model_weights_hashes
+        trusted = is_trusted_model_weights(
+            weights_path=weights_path,
+            trusted_hashes=trusted_hashes,
+            public_key_path=settings.model_weights_public_key_path,
+            signature_extension=settings.model_weights_signature_extension,
+        )
+        if not trusted:
+            logger.warning(
+                "Model weights %s are not trusted. "
+                "Deep learning inference will be disabled.",
+                weights_path,
+            )
+        return trusted
 
     @property
     def model_name(self) -> str:
@@ -82,10 +111,15 @@ class ImageDeepfakeAnalyzer(BaseMediaAnalyzer):
         weights_path = Path(settings.AI_MODEL_WEIGHTS_DIR) / "image_model.pt"
         if weights_path.exists():
             try:
+                if not self._is_trusted_model_weights(weights_path):
+                    self._model_loaded = False
+                    return
+
                 import torch
                 self._deep_model = torch.load(
                     str(weights_path),
                     map_location=self.inference_device,
+                    weights_only=True,
                 )
                 self._deep_model.eval()
                 self._model_loaded = True
@@ -95,6 +129,7 @@ class ImageDeepfakeAnalyzer(BaseMediaAnalyzer):
                     f"Could not load deep model weights: {e}. "
                     f"Falling back to classical analysis."
                 )
+                self._model_loaded = False
         else:
             logger.info(
                 f"No model weights found at {weights_path}. "
@@ -120,6 +155,10 @@ class ImageDeepfakeAnalyzer(BaseMediaAnalyzer):
         self._log_analysis_start(filename, "IMAGE")
         notes = []
         errors = []
+        if self._model_loaded and self._weights_hash:
+            notes.append(
+                f"Deep learning model loaded with trusted weights hash {self._weights_hash}."
+            )
 
         ext = Path(filename).suffix.lower()
         if ext not in self.SUPPORTED_EXTENSIONS:
@@ -184,6 +223,7 @@ class ImageDeepfakeAnalyzer(BaseMediaAnalyzer):
             verdict=verdict,
             model_name=self.MODEL_NAME,
             model_version=self.MODEL_VERSION,
+            model_weights_hash=self._weights_hash,
             face_regions_detected=face_regions,
             compression_artifact_score=round(compression_score, 4),
             noise_pattern_anomaly_score=round(noise_score, 4),

@@ -1,0 +1,56 @@
+services:
+  - type: web
+    name: hexshield-ai-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_NAME
+        value: HexShield AI
+      - key: APP_VERSION
+        value: 1.0.0
+      - key: APP_ENV
+        value: production
+      - key: DEBUG
+        value: false
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: 7
+      - key: UPLOAD_DIR
+        value: storage/uploads
+      - key: REPORTS_DIR
+        value: storage/reports
+      - key: MAX_UPLOAD_SIZE_MB
+        value: 500
+      - key: ENTROPY_ELEVATED_THRESHOLD
+        value: 6.5
+      - key: ENTROPY_CRITICAL_THRESHOLD
+        value: 7.2
+      - key: MAGIC_BYTES_READ_LENGTH
+        value: 32
+      - key: AI_MODEL_WEIGHTS_DIR
+        value: app/services/ai_engine/weights
+      - key: AI_CONFIDENCE_THRESHOLD
+        value: 0.75
+      - key: AI_INFERENCE_DEVICE
+        value: cpu
+      - key: REPORT_ISSUING_AUTHORITY
+        value: HexShield AI Forensic Platform
+      - key: REPORT_JURISDICTION
+        value: Republic of Kenya
+      - key: CHAIN_OF_CUSTODY_STRICT_MODE
+        value: true
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FILE
+        value: logs/hexshield.log
+      - key: DATABASE_POOL_SIZE
+        value: 5
+      - key: DATABASE_MAX_OVERFLOW
+        value: 10
+      - key: DATABASE_ECHO
+        value: false

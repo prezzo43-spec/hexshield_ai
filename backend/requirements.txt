@@ -38,7 +38,7 @@ pydantic-settings==2.2.1
 email-validator==2.1.1
 
 # Image Processing (lightweight — no PyTorch)
-Pillow==10.3.0
+Pillow==11.1.0
 numpy==1.26.4
 opencv-python-headless==4.9.0.80
 

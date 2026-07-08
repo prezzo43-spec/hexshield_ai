@@ -1,5 +1,6 @@
 # =============================================================================
-# HexShield AI — Backend Python Dependencies
+# HexShield AI — Backend Python Dependencies (Production/Deployment)
+# PyTorch and heavy ML packages excluded — AI uses Hugging Face API instead
 # =============================================================================
 
 # Web Framework
@@ -36,24 +37,22 @@ pydantic==2.7.1
 pydantic-settings==2.2.1
 email-validator==2.1.1
 
-# AI and ML — Layer 2
-torch==2.12.0
-torchvision==0.20.0
+# Image Processing (lightweight — no PyTorch)
 Pillow==10.3.0
 numpy==1.26.4
 opencv-python-headless==4.9.0.80
+
+# Audio Analysis
 librosa==0.10.2
 scikit-learn==1.4.2
 
 # HTTP Client (for Hugging Face API)
 requests==2.31.0
+httpx==0.27.0
 
 # Report Generation — Layer 3
 reportlab==4.1.0
 jinja2==3.1.4
-
-# HTTP Client
-httpx==0.27.0
 
 # Testing
 pytest==8.2.0

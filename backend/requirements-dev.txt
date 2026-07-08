@@ -1,0 +1,10 @@
+# =============================================================================
+# HexShield AI — Local Development Dependencies (includes PyTorch)
+# Run: pip install -r requirements-dev.txt
+# =============================================================================
+
+-r requirements.txt
+
+# PyTorch for local deep learning model support
+torch==2.5.1
+torchvision==0.20.1

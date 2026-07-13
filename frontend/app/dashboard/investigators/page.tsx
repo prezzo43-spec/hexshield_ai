@@ -34,6 +34,7 @@ export default function InvestigatorsPage() {
     organization: "",
     department: "",
     role: "FORENSIC_ANALYST",
+    temporary_password: "",
   });
 
   useEffect(() => {
@@ -63,8 +64,14 @@ export default function InvestigatorsPage() {
 
     setSubmitting(true);
     try {
-      await createInvestigator(form);
-      setSuccess(`Investigator ${form.full_name} registered successfully.`);
+      const response = await createInvestigator(form);
+      const tempPassword = response?.temporary_password;
+
+      setSuccess(
+        tempPassword
+          ? `Investigator ${form.full_name} registered successfully. Temporary password: ${tempPassword}`
+          : `Investigator ${form.full_name} registered successfully.`
+      );
       setShowForm(false);
       setForm({
         full_name: "",
@@ -73,6 +80,7 @@ export default function InvestigatorsPage() {
         organization: "",
         department: "",
         role: "FORENSIC_ANALYST",
+        temporary_password: "",
       });
       fetchData();
     } catch (e: any) {
@@ -209,6 +217,21 @@ export default function InvestigatorsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group" style={{ width: "100%" }}>
+              <label className="label">Temporary Password</label>
+              <input
+                className="input"
+                type="text"
+                placeholder="Leave blank to auto-generate a secure temporary password"
+                value={form.temporary_password}
+                onChange={(e) =>
+                  setForm({ ...form, temporary_password: e.target.value })
+                }
+              />
             </div>
           </div>
 

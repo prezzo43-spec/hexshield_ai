@@ -111,8 +111,9 @@ def login(
             detail="Badge number/email and password are required.",
         )
 
-    # Get client IP for audit logging
+    # Capture request metadata for explicit account access audit logging
     client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
 
     # Authenticate
     investigator, error = authenticate_investigator(
@@ -123,20 +124,31 @@ def login(
     )
 
     if error:
-        # Log failed attempt
+        logger.warning(
+            "Failed login audit: targeted_email=%s client_ip=%s user_agent=%s",
+            login_identifier,
+            client_ip,
+            user_agent,
+        )
+
+        # Log failed attempt with the targeted account identifier and client metadata
         db.execute(
             text("""
                 INSERT INTO system_audit_log (
                     event_category, event_action, event_description,
-                    ip_address, success, error_message
+                    ip_address, user_agent, success, error_message
                 ) VALUES (
                     'AUTH', 'LOGIN_FAILED', :description,
-                    :ip, FALSE, :error
+                    :ip, :user_agent, FALSE, :error
                 )
             """),
             {
-                "description": f"Failed login attempt for: {login_identifier}",
+                "description": (
+                    f"Failed login attempt for targeted email/account: "
+                    f"{login_identifier} client_ip={client_ip} user_agent={user_agent}"
+                ),
                 "ip": client_ip,
+                "user_agent": user_agent,
                 "error": error,
             },
         )
@@ -176,24 +188,35 @@ def login(
         max_age=8 * 60 * 60,  # 8 hours
     )
 
-    # Log successful login
+    logger.info(
+        "Successful login audit: investigator_id=%s full_name=%s role=%s client_ip=%s user_agent=%s",
+        investigator["id"],
+        investigator["full_name"],
+        investigator["role"],
+        client_ip,
+        user_agent,
+    )
+
+    # Log successful login with explicit account access metadata
     db.execute(
         text("""
             INSERT INTO system_audit_log (
                 event_category, event_action, event_description,
-                investigator_id, ip_address, success
+                investigator_id, ip_address, user_agent, success
             ) VALUES (
                 'AUTH', 'LOGIN_SUCCESS', :description,
-                :investigator_id, :ip, TRUE
+                :investigator_id, :ip, :user_agent, TRUE
             )
         """),
         {
             "description": (
-                f"Successful login: {investigator['full_name']} "
-                f"({investigator['role']})"
+                f"Successful login: investigator_id={investigator['id']} "
+                f"full_name={investigator['full_name']} role={investigator['role']} "
+                f"client_ip={client_ip} user_agent={user_agent}"
             ),
             "investigator_id": str(investigator["id"]),
             "ip": client_ip,
+            "user_agent": user_agent,
         },
     )
     db.commit()

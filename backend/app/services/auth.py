@@ -7,6 +7,7 @@
 import hashlib
 import secrets
 import logging
+import string
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Tuple
 
@@ -63,6 +64,26 @@ def validate_password_strength(password: str) -> Tuple[bool, str]:
     if not any(c in special_chars for c in password):
         return False, "Password must contain at least one special character."
     return True, "Password is valid."
+
+
+def generate_temporary_password(length: int = 16) -> str:
+    """
+    Generate a CJIS-friendly temporary password for new investigator setup.
+    """
+    alphabet = (
+        string.ascii_uppercase
+        + string.ascii_lowercase
+        + string.digits
+        + "!@#$%^&*()_+-=[]{}|;':\",./<>?"
+    )
+
+    for _ in range(20):
+        password = "".join(secrets.choice(alphabet) for _ in range(length))
+        valid, _ = validate_password_strength(password)
+        if valid:
+            return password
+
+    return "TempPass!2026Secure"
 
 
 # =============================================================================

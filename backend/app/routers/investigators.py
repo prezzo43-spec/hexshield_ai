@@ -10,6 +10,7 @@ from typing import List
 import uuid
 
 from app.database import get_db
+from app.services.auth import generate_temporary_password, hash_password, validate_password_strength
 
 router = APIRouter()
 
@@ -80,6 +81,9 @@ def get_investigator(investigator_id: str, db: Session = Depends(get_db)):
 def create_investigator(payload: dict, db: Session = Depends(get_db)):
     """
     Register a new investigator in the system.
+
+    Admins may optionally provide a temporary password, otherwise one is
+    generated automatically and returned so it can be copied manually.
     """
     required_fields = ["full_name", "email", "organization", "role"]
     for field in required_fields:
@@ -101,16 +105,33 @@ def create_investigator(payload: dict, db: Session = Depends(get_db)):
             detail=f"An investigator with email '{payload['email']}' already exists.",
         )
 
+    temporary_password = (
+        payload.get("temporary_password")
+        or payload.get("password")
+        or generate_temporary_password()
+    )
+
+    is_valid, error_message = validate_password_strength(temporary_password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error_message,
+        )
+
     investigator_id = str(uuid.uuid4())
+    password_hash = hash_password(temporary_password)
+    is_badge_verified = payload.get("is_badge_verified", True)
 
     db.execute(
         text("""
             INSERT INTO investigators (
                 id, full_name, email, badge_number,
-                organization, department, role
+                organization, department, role,
+                password_hash, is_badge_verified, first_login
             ) VALUES (
                 :id, :full_name, :email, :badge_number,
-                :organization, :department, :role
+                :organization, :department, :role,
+                :password_hash, :is_badge_verified, TRUE
             )
         """),
         {
@@ -121,13 +142,19 @@ def create_investigator(payload: dict, db: Session = Depends(get_db)):
             "organization": payload["organization"],
             "department": payload.get("department"),
             "role": payload["role"],
+            "password_hash": password_hash,
+            "is_badge_verified": is_badge_verified,
         },
     )
     db.commit()
 
     return {
-        "message": "Investigator registered successfully.",
+        "message": (
+            "Investigator registered successfully. Use the temporary password "
+            "on first login and the account will be forced to change it."
+        ),
         "investigator_id": investigator_id,
+        "temporary_password": temporary_password,
     }
 
 

@@ -5,7 +5,21 @@
 
 import axios from "axios";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// 1. Get raw string value from environment or use local fallback
+let rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// 2. Parse out markdown link formatting [text](url) or clean bracket artifacts if present
+if (rawUrl.includes("[")) {
+  const match = rawUrl.match(/\((https?:\/\/[^\)]+)\)/);
+  if (match && match[1]) {
+    rawUrl = match[1];
+  } else {
+    rawUrl = rawUrl.replace(/[\[\]]/g, "").split("]")[0];
+  }
+}
+
+// 3. Remove trailing slashes to keep endpoint routing paths clean
+const BASE_URL = rawUrl.replace(/\/+$/, "");
 
 export const api = axios.create({
   baseURL: BASE_URL,

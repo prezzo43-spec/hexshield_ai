@@ -1,10 +1,9 @@
 # =============================================================================
 # HexShield AI — AI Engine Orchestrator
-# Layer 2: Multimodal AI Deepfake Detection Engine
+# Layer 2: Multimodal AI Deepfake Detection Engine (Consensus Protected)
 #
-# Routes files to the correct analyzer based on media type.
-# Uses Hugging Face API for real deepfake detection.
-# Falls back to classical analysis if HF API is unavailable.
+# Routes files to correct analyzer based on media type, runs Hugging Face tool,
+# then validates the output using a multi-agent consensus system.
 # =============================================================================
 
 import time
@@ -19,6 +18,7 @@ from app.services.ai_engine.huggingface_analyzer import (
     VIDEO_EXTENSIONS,
     AUDIO_EXTENSIONS,
 )
+from app.services.ai_engine.consensus_engine import ForensicConsensusEngine
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def detect_media_type(filename: str) -> Optional[str]:
 class AIDeepfakeEngine:
     """
     Layer 2: Multimodal AI Deepfake Detection Engine.
-    Uses Hugging Face Inference API for real deepfake detection.
+    Uses Hugging Face Inference API and validates results with a Groq Consensus Engine.
     """
 
     def __init__(self, inference_device: str = None):
@@ -50,6 +50,7 @@ class AIDeepfakeEngine:
             inference_device or settings.AI_INFERENCE_DEVICE
         )
         self._hf_analyzer = None
+        self._consensus_engine = None
         logger.info(
             f"AIDeepfakeEngine initialized — device={self.inference_device}"
         )
@@ -59,6 +60,12 @@ class AIDeepfakeEngine:
         if self._hf_analyzer is None:
             self._hf_analyzer = HuggingFaceDeepfakeAnalyzer()
         return self._hf_analyzer
+
+    @property
+    def consensus_engine(self) -> ForensicConsensusEngine:
+        if self._consensus_engine is None:
+            self._consensus_engine = ForensicConsensusEngine()
+        return self._consensus_engine
 
     def analyze_file(
         self,
@@ -88,17 +95,28 @@ class AIDeepfakeEngine:
             f"({media_type}) to HF analyzer."
         )
 
-        # Run Hugging Face analysis
+        # Step 1: Run Hugging Face analysis to retrieve raw signal values
         result_dict = self.hf_analyzer.analyze(data, filename)
 
-        # Convert dict result to AIAnalysisResult
+        # Step 2: Pass Hugging Face raw signal results to the Groq multi-agent engine for logical check
+        logger.info(f"AIDeepfakeEngine: Passing {filename} output to Multi-Agent Consensus Engine.")
+        consensus_result = self.consensus_engine.evaluate_analysis(
+            media_type=media_type,
+            raw_results=result_dict
+        )
+
+        # Step 3: Build the notes array with both execution metrics and consensus findings
+        notes = result_dict.get("analysis_notes", [])
+        notes.append(f"Consensus Justification: {consensus_result.get('justification')}")
+
+        # Convert final dict result to verified AIAnalysisResult
         return AIAnalysisResult(
             media_type=result_dict.get("media_type", media_type),
             authenticity_score=result_dict.get("authenticity_score", 0.0),
-            manipulation_confidence=result_dict.get("manipulation_confidence", 0.0),
-            verdict=result_dict.get("verdict", "INCONCLUSIVE"),
-            model_name=result_dict.get("model_name", "HexShield-AI-Engine"),
-            model_version=result_dict.get("model_version", "1.0.0"),
+            manipulation_confidence=consensus_result.get("confidence_score", result_dict.get("manipulation_confidence", 0.0)),
+            verdict=consensus_result.get("verdict", result_dict.get("verdict", "INCONCLUSIVE")),
+            model_name="HexShield-Consensus-Engine",
+            model_version="1.1.0 (Groq Multi-Agent)",
             face_regions_detected=result_dict.get("face_regions_detected"),
             compression_artifact_score=result_dict.get("compression_artifact_score"),
             noise_pattern_anomaly_score=result_dict.get("noise_pattern_anomaly_score"),
@@ -112,7 +130,7 @@ class AIDeepfakeEngine:
             frame_details=result_dict.get("frame_details", []),
             processing_duration_ms=result_dict.get("processing_duration_ms"),
             inference_device=self.inference_device,
-            analysis_notes=result_dict.get("analysis_notes", []),
+            analysis_notes=notes,
             errors=result_dict.get("errors", []),
         )
 

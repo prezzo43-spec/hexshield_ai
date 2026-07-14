@@ -1,5 +1,5 @@
 // =============================================================================
-// HexShield AI — Sidebar Navigation Component (Role Protected)
+// HexShield AI — Sidebar Navigation Component (Role Segregated)
 // =============================================================================
 
 "use client";
@@ -20,25 +20,50 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Navigation items marked by role restrictions to align with agency standard
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Cases", href: "/dashboard/cases", icon: FolderOpen },
-  { label: "Submit Evidence", href: "/dashboard/submit", icon: Upload },
-  { label: "Analysis", href: "/dashboard/analysis", icon: Cpu },
+  { 
+    label: "Submit Evidence", 
+    href: "/dashboard/submit", 
+    icon: Upload, 
+    investigatorOnly: true 
+  },
+  { 
+    label: "Analysis", 
+    href: "/dashboard/analysis", 
+    icon: Cpu, 
+    investigatorOnly: true 
+  },
   { label: "Reports", href: "/dashboard/reports", icon: FileText },
-  { label: "Investigators", href: "/dashboard/investigators", icon: Users, adminOnly: true },
-  { label: "System Health", href: "/dashboard/health", icon: Activity, adminOnly: true },
+  { 
+    label: "Investigators", 
+    href: "/dashboard/investigators", 
+    icon: Users, 
+    adminOnly: true 
+  },
+  { 
+    label: "System Health", 
+    href: "/dashboard/health", 
+    icon: Activity, 
+    adminOnly: true 
+  },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { investigator, logout } = useAuth();
 
-  // Check if the current logged-in user is your primary administrator email
+  // Validate admin identity based on team administrative email
   const isAdmin = investigator?.email === "team@hexshield.go.ke";
 
-  // Filter out any admin-only links if the user is a standard investigator
-  const visibleNavItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
+  // Filter menu items: Admins see monitoring/management; Investigators see execution tools
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.investigatorOnly && isAdmin) return false;
+    return true;
+  });
 
   return (
     <aside

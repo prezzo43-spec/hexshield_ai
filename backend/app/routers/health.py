@@ -56,12 +56,8 @@ def detailed_health_check(db: Session = Depends(get_db)):
             },
             "hex_engine": {
                 "status": "healthy",
-                "version": "1.0.0",
-            },
-            "ai_engine": {
-                "status": "pending",
-                "note": "AI engine integration pending Step 6",
-            },
+                "version": "1.0.0"
+            }
         },
         "system": {
             "python_version": sys.version,

@@ -12,6 +12,7 @@ import uuid
 
 from app.database import get_db
 from app.services.auth import hash_password, validate_password_strength
+from app.routers.auth import get_auth_investigator
 
 router = APIRouter()
 
@@ -378,4 +379,154 @@ def get_activity_logs(
     return {
         "total": len(rows),
         "logs": [dict(row) for row in rows],
+    }
+
+
+def require_admin_email(
+    investigator: dict = Depends(get_auth_investigator),
+):
+    if investigator.get("email") != "team@hexshield.go.ke":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Only team@hexshield.go.ke is authorized.",
+        )
+    return investigator
+
+
+@router.post("/admin/investigators", status_code=status.HTTP_201_CREATED)
+def admin_create_investigator(
+    payload: dict,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin_email),
+):
+    """
+    Create a new investigator directly. Only 'team@hexshield.go.ke' can call this.
+    """
+    required_fields = ["full_name", "email", "organization", "role", "temporary_password"]
+    for field in required_fields:
+        if field not in payload:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Missing required field: {field}",
+            )
+
+    # Validate password strength
+    valid, msg = validate_password_strength(payload["temporary_password"])
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Temporary password too weak: {msg}",
+        )
+
+    # Check for duplicate email
+    existing_email = db.execute(
+        text("SELECT id FROM investigators WHERE email = :email"),
+        {"email": payload["email"]},
+    ).fetchone()
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"An investigator with email '{payload['email']}' already exists.",
+        )
+
+    # Check for duplicate badge number
+    if payload.get("badge_number"):
+        existing_badge = db.execute(
+            text("SELECT id FROM investigators WHERE badge_number = :badge"),
+            {"badge": payload["badge_number"]},
+        ).fetchone()
+        if existing_badge:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Badge number '{payload['badge_number']}' is already registered.",
+            )
+
+    investigator_id = str(uuid.uuid4())
+    password_hash = hash_password(payload["temporary_password"])
+
+    db.execute(
+        text("""
+            INSERT INTO investigators (
+                id, full_name, email, badge_number,
+                organization, department, role,
+                password_hash, is_badge_verified, first_login,
+                is_active
+            ) VALUES (
+                :id, :full_name, :email, :badge_number,
+                :organization, :department, :role,
+                :password_hash, :is_badge_verified, FALSE,
+                TRUE
+            )
+        """),
+        {
+            "id": investigator_id,
+            "full_name": payload["full_name"],
+            "email": payload["email"],
+            "badge_number": payload.get("badge_number"),
+            "organization": payload["organization"],
+            "department": payload.get("department"),
+            "role": payload["role"],
+            "password_hash": password_hash,
+            "is_badge_verified": payload.get("is_badge_verified", False),
+        },
+    )
+    db.commit()
+
+    return {
+        "message": "Investigator registered successfully.",
+        "investigator_id": investigator_id,
+        "full_name": payload["full_name"],
+        "email": payload["email"],
+        "badge_number": payload.get("badge_number"),
+        "role": payload["role"],
+        "is_badge_verified": payload.get("is_badge_verified", False),
+        "first_login": False,
+    }
+
+
+@router.patch("/admin/investigators/{investigator_id}/status")
+def update_investigator_status(
+    investigator_id: str,
+    payload: dict,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin_email),
+):
+    """
+    Activate or deactivate an investigator. Only 'team@hexshield.go.ke' can call this.
+    """
+    if "is_active" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="is_active field is required in payload.",
+        )
+    
+    is_active = bool(payload["is_active"])
+    
+    # Check if the investigator exists
+    result = db.execute(
+        text("SELECT id, full_name, email FROM investigators WHERE id = :id"),
+        {"id": investigator_id},
+    ).mappings().first()
+    
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Investigator {investigator_id} not found.",
+        )
+        
+    db.execute(
+        text("""
+            UPDATE investigators
+            SET is_active = :is_active
+            WHERE id = :id
+        """),
+        {"is_active": is_active, "id": investigator_id},
+    )
+    db.commit()
+    
+    return {
+        "message": f"Investigator status updated successfully to {'active' if is_active else 'inactive'}.",
+        "investigator_id": investigator_id,
+        "email": result["email"],
+        "is_active": is_active,
     }

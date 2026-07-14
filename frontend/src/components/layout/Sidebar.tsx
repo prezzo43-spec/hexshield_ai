@@ -1,5 +1,5 @@
 // =============================================================================
-// HexShield AI — Sidebar Navigation Component
+// HexShield AI — Sidebar Navigation Component (Role Protected)
 // =============================================================================
 
 "use client";
@@ -26,13 +26,19 @@ const NAV_ITEMS = [
   { label: "Submit Evidence", href: "/dashboard/submit", icon: Upload },
   { label: "Analysis", href: "/dashboard/analysis", icon: Cpu },
   { label: "Reports", href: "/dashboard/reports", icon: FileText },
-  { label: "Investigators", href: "/dashboard/investigators", icon: Users },
-  { label: "System Health", href: "/dashboard/health", icon: Activity },
+  { label: "Investigators", href: "/dashboard/investigators", icon: Users, adminOnly: true },
+  { label: "System Health", href: "/dashboard/health", icon: Activity, adminOnly: true },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { investigator, logout } = useAuth();
+
+  // Check if the current logged-in user is your primary administrator email
+  const isAdmin = investigator?.email === "team@hexshield.go.ke";
+
+  // Filter out any admin-only links if the user is a standard investigator
+  const visibleNavItems = NAV_ITEMS.filter(item => !item.adminOnly || isAdmin);
 
   return (
     <aside
@@ -104,7 +110,7 @@ export default function Sidebar() {
           gap: "0.25rem",
         }}
       >
-        {NAV_ITEMS.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive =
             item.href === "/dashboard"

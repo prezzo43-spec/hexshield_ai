@@ -145,7 +145,7 @@ def create_investigator(payload: dict, db: Session = Depends(get_db)):
             ) VALUES (
                 :id, :full_name, :email, :badge_number,
                 :organization, :department, :role,
-                :password_hash, :is_badge_verified, False,
+                :password_hash, :is_badge_verified, FALSE,
                 TRUE
             )
         """),
@@ -171,7 +171,7 @@ def create_investigator(payload: dict, db: Session = Depends(get_db)):
         "badge_number": payload.get("badge_number"),
         "role": payload["role"],
         "is_badge_verified": payload.get("is_badge_verified", False),
-        "first_login": True,
+        "first_login": False,
         "credentials_note": (
             "Communicate the temporary password to the investigator "
             "through a secure official channel. They must change it on first login."

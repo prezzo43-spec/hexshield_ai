@@ -28,8 +28,8 @@ engine = create_engine(
     # Critical for Neon serverless which may suspend idle connections.
     echo=settings.DATABASE_ECHO,
     connect_args={
-        "sslmode": "require",
-        "connect_timeout": 10,
+        "sslmode": "prefer",
+        "connect_timeout": 40,
     },
 )
 

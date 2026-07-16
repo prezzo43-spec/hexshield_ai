@@ -260,3 +260,34 @@ def evaluate_submission_consensus(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Forensic consensus calculation failed: {str(e)}",
         )
+
+
+# =============================================================================
+# FRONTEND COMPATIBILITY ROUTE
+# Catches requests hitting the old /submissions/.../analyze/ai endpoint
+# =============================================================================
+@router.post(
+    "/submissions/{submission_id}/analyze/ai",
+    response_model=ForensicReportData,
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_role("LEAD_INVESTIGATOR", "SENIOR_ANALYST", "SYSTEM_ADMIN"))],
+    summary="Frontend compatibility endpoint for AI analysis",
+)
+def frontend_compat_ai_analysis(
+    submission_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_auth_investigator),
+):
+    """
+    Catches frontend requests directed at the path:
+    /api/v1/submissions/{submission_id}/analyze/ai
+    and routes them seamlessly into the updated consensus pipeline.
+    """
+    logger.info("Redirecting frontend compatibility call for submission: %s", submission_id)
+    return evaluate_submission_consensus(
+        submission_id=submission_id,
+        request=request,
+        db=db,
+        current_user=current_user
+    )

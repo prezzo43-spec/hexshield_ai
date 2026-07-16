@@ -218,18 +218,35 @@ export const generateReport = (
   submissionId: string,
   format: "JSON" | "PDF",
   examinerNotes?: string
-) =>
-  api
-    .post(`/api/v1/submissions/${submissionId}/reports`, null, {
-      params: {
+): Promise<{ report_id: string; status: string }> => {
+  const params = new URLSearchParams({
         report_format: format,
-        examiner_notes: examinerNotes,
-      },
-    })
-    .then((r) => r.data);
+    ...(examinerNotes && { examiner_notes: examinerNotes }),
+  });
+  return fetch(`${BASE_URL}/api/v1/submissions/${submissionId}/reports?${params}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  }).then(async (res) => {
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json();
+  });
+};
 
+export const fetchReport = (
+  reportId: string
+): Promise<{ report_id: string; report_generated: boolean }> => {
+  return fetch(`${BASE_URL}/api/v1/reports/${reportId}`).then(async (res) => {
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+    return {
+      report_id: reportId,
+      report_generated: data.report_generated || false,
+    };
+  });
+};
 export const listReports = (caseId: string) =>
   api.get(`/api/v1/cases/${caseId}/reports`).then((r) => r.data);
 
 export const getReportDownloadUrl = (reportId: string) =>
   `${BASE_URL}/api/v1/reports/${reportId}/download`;
+

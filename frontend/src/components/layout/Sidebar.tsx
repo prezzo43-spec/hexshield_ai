@@ -1,5 +1,6 @@
 // =============================================================================
-// HexShield AI — Sidebar Navigation Component (Role Segregated)
+// HexShield AI — Sidebar Navigation Component
+// Role-based navigation — admins see management tools, investigators see field tools
 // =============================================================================
 
 "use client";
@@ -17,37 +18,58 @@ import {
   Activity,
   LogOut,
   User,
+  ClipboardList,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Navigation items marked by role restrictions to align with agency standard
 const NAV_ITEMS = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Cases", href: "/dashboard/cases", icon: FolderOpen },
-  { 
-    label: "Submit Evidence", 
-    href: "/dashboard/submit", 
-    icon: Upload, 
-    investigatorOnly: true 
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    roles: ["ALL"],
   },
-  { 
-    label: "Analysis", 
-    href: "/dashboard/analysis", 
-    icon: Cpu, 
-    investigatorOnly: true 
+  {
+    label: "Cases",
+    href: "/dashboard/cases",
+    icon: FolderOpen,
+    roles: ["ALL"],
   },
-  { label: "Reports", href: "/dashboard/reports", icon: FileText },
-  { 
-    label: "Investigators", 
-    href: "/dashboard/investigators", 
-    icon: Users, 
-    adminOnly: true 
+  {
+    label: "Submit Evidence",
+    href: "/dashboard/submit",
+    icon: Upload,
+    roles: ["SYSTEM_ADMIN", "LEAD_INVESTIGATOR", "FORENSIC_ANALYST"],
   },
-  { 
-    label: "System Health", 
-    href: "/dashboard/health", 
-    icon: Activity, 
-    adminOnly: true 
+  {
+    label: "Analysis",
+    href: "/dashboard/analysis",
+    icon: Cpu,
+    roles: ["SYSTEM_ADMIN", "LEAD_INVESTIGATOR", "FORENSIC_ANALYST"],
+  },
+  {
+    label: "Reports",
+    href: "/dashboard/reports",
+    icon: FileText,
+    roles: ["ALL"],
+  },
+  {
+    label: "Investigators",
+    href: "/dashboard/investigators",
+    icon: Users,
+    roles: ["SYSTEM_ADMIN"],
+  },
+  {
+    label: "Activity Logs",
+    href: "/dashboard/logs",
+    icon: ClipboardList,
+    roles: ["SYSTEM_ADMIN"],
+  },
+  {
+    label: "System Health",
+    href: "/dashboard/health",
+    icon: Activity,
+    roles: ["SYSTEM_ADMIN"],
   },
 ];
 
@@ -55,14 +77,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { investigator, logout } = useAuth();
 
-  // Validate admin identity based on team administrative email
-  const isAdmin = investigator?.email === "team@hexshield.go.ke";
+  const userRole = investigator?.role || "READ_ONLY";
 
-  // Filter menu items: Admins see monitoring/management; Investigators see execution tools
   const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (item.adminOnly && !isAdmin) return false;
-    if (item.investigatorOnly && isAdmin) return false;
-    return true;
+    if (item.roles.includes("ALL")) return true;
+    return item.roles.includes(userRole);
   });
 
   return (

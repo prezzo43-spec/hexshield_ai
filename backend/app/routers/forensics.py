@@ -45,7 +45,7 @@ def evaluate_submission_consensus(
     Triggers the AI Consensus pipeline for a given database submission ID.
     Reconciles metadata, builds dynamic Pydantic payloads, and executes consensus evaluation.
     """
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = request.client.host if request.client else "127.0.0.1"
     logger.info(
         "Consensus request received: submission_id=%s requested_by=%s",
         submission_id,
@@ -53,16 +53,15 @@ def evaluate_submission_consensus(
     )
 
     # 1. Fetch DB records to construct the dynamic payload
-    # Note: Replace column names/queries with your exact database schema fields
     try:
-        # Get dynamic submission metadata
+        # Get dynamic submission metadata (aligned with file_submissions table schema)
         submission_record = db.execute(
             text("""
                 SELECT 
                     id, original_filename, file_size_bytes, 
                     sha256_hash, sha512_hash, mime_type_declared, 
-                    mime_type_detected, ingestion_timestamp, submitted_by_id
-                FROM evidence_submissions 
+                    mime_type_detected, ingestion_timestamp, submitted_by
+                FROM file_submissions 
                 WHERE id = :id
             """),
             {"id": submission_id},
@@ -74,7 +73,7 @@ def evaluate_submission_consensus(
                 detail=f"Evidence submission with ID {submission_id} not found.",
             )
 
-        # Get connected case details
+        # Get connected case details (aligned by joining cases straight to file_submissions)
         case_record = db.execute(
             text("""
                 SELECT 
@@ -83,8 +82,8 @@ def evaluate_submission_consensus(
                     i.full_name, i.email, i.organization, i.badge_number, i.role
                 FROM cases c
                 LEFT JOIN investigators i ON c.lead_investigator_id = i.id
-                JOIN case_submissions cs ON cs.case_id = c.id
-                WHERE cs.submission_id = :submission_id
+                JOIN file_submissions fs ON fs.case_id = c.id
+                WHERE fs.id = :submission_id
                 LIMIT 1
             """),
             {"submission_id": submission_id},
@@ -113,7 +112,7 @@ def evaluate_submission_consensus(
         # Fetch submitter metadata
         submitter_record = db.execute(
             text("SELECT id, full_name, email, organization, badge_number, role FROM investigators WHERE id = :id"),
-            {"id": submission_record.submitted_by_id},
+            {"id": submission_record.submitted_by},
         ).fetchone()
 
         submitter_inv = InvestigatorInfo(
@@ -139,16 +138,17 @@ def evaluate_submission_consensus(
             submitted_by=submitter_inv,
         )
 
-        # Reconstruct verified chain of custody events sequentially from DB
+        # Reconstruct verified chain of custody events sequentially (aligned with chain_of_custody_events)
         custody_records = db.execute(
             text("""
                 SELECT 
-                    event_sequence, event_type, event_description, actor_name, 
-                    actor_badge, actor_role, hash_at_event, hash_verified, 
-                    event_timestamp, notes
-                FROM custody_chain_log 
-                WHERE submission_id = :submission_id
-                ORDER BY event_sequence ASC
+                    c.event_sequence, c.event_type, c.event_description, i.full_name AS actor_name, 
+                    i.badge_number AS actor_badge, c.actor_role, c.hash_at_event, c.hash_verified, 
+                    c.event_timestamp, c.notes
+                FROM chain_of_custody_events c
+                JOIN investigators i ON c.actor_id = i.id
+                WHERE c.submission_id = :submission_id
+                ORDER BY c.event_sequence ASC
             """),
             {"submission_id": submission_id},
         ).fetchall()
@@ -189,7 +189,7 @@ def evaluate_submission_consensus(
                 )
             )
 
-        # Assemble Payload
+        # Assemble Payload (Allowing Hex and AI fields to default to None)
         forensic_payload = ForensicReportData(
             report_id=f"rpt_{submission_id[:8]}",
             report_type="CONSTRUCT_REPORT",
@@ -211,14 +211,14 @@ def evaluate_submission_consensus(
             detail=f"Failed gathering forensic database assets: {str(dbe)}"
         )
 
-    # 2. Fire the engine
+    # 2. Fire the consensus engine
     try:
         evaluated_report = engine.evaluate_consensus(forensic_payload)
 
         # 3. Save evaluated findings back to Database
         db.execute(
             text("""
-                UPDATE evidence_submissions 
+                UPDATE file_submissions 
                 SET 
                     consensus_notes = :notes,
                     analysis_completed_at = :completed_at
@@ -231,21 +231,22 @@ def evaluate_submission_consensus(
             },
         )
 
-        # Write explicit tracking transaction to system security logs
+        # Write immutable history event into the audit_ledger
         db.execute(
             text("""
-                INSERT INTO system_audit_log (
-                    event_category, event_action, event_description, 
-                    investigator_id, ip_address, success
+                INSERT INTO audit_ledger (
+                    evidence_id, action_description, actor_id, ip_address, timestamp, notes
                 ) VALUES (
-                    'FORENSICS', 'CONSENSUS_GENERATION', :description, 
-                    :user_id, :ip, TRUE
+                    :evidence_id, :description, :actor_id, :ip, :timestamp, :notes
                 )
             """),
             {
-                "description": f"Consensus successfully processed for submission: {submission_id}",
-                "user_id": str(current_user.get("id")),
+                "evidence_id": submission_id,
+                "description": "CONSENSUS_GENERATION_SUCCESSFUL",
+                "actor_id": str(current_user.get("id")),
                 "ip": client_ip,
+                "timestamp": datetime.now(timezone.utc),
+                "notes": f"AI Consensus evaluated successfully by {current_user.get('full_name')}."
             },
         )
         db.commit()

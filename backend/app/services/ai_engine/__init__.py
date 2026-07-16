@@ -8,6 +8,7 @@ from app.services.ai_engine.model_base import AIAnalysisResult, determine_ai_ver
 from app.services.ai_engine.image_analyzer import ImageDeepfakeAnalyzer
 from app.services.ai_engine.video_analyzer import VideoDeepfakeAnalyzer
 from app.services.ai_engine.audio_analyzer import AudioDeepfakeAnalyzer
+from app.services.ai_engine.consensus_engine import ForensicConsensusEngine
 
 __all__ = [
     "AIDeepfakeEngine",
@@ -17,4 +18,5 @@ __all__ = [
     "ImageDeepfakeAnalyzer",
     "VideoDeepfakeAnalyzer",
     "AudioDeepfakeAnalyzer",
+    "ForensicConsensusEngine",
 ]

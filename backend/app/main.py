@@ -213,7 +213,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Each router handles one domain of the API.
 # Imported here and registered with a prefix and tags.
 # -----------------------------------------------------------------------------
-from app.routers import health, investigators, cases, submissions, analysis, reports, auth
+from app.routers import health, investigators, cases, submissions, analysis, reports, auth, forensics
 
 app.include_router(health.router, prefix="/api", tags=["Health"])
 app.include_router(auth.router, prefix="/api/v1", tags=["Authentication"])
@@ -222,3 +222,4 @@ app.include_router(cases.router, prefix="/api/v1", tags=["Cases"])
 app.include_router(submissions.router, prefix="/api/v1", tags=["File Submissions"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
 app.include_router(reports.router, prefix="/api/v1", tags=["Reports"])
+app.include_router(forensics.router, prefix="/api/v1", tags=["Forensics"])

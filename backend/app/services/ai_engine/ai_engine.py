@@ -18,7 +18,6 @@ from app.services.ai_engine.huggingface_analyzer import (
     VIDEO_EXTENSIONS,
     AUDIO_EXTENSIONS,
 )
-from app.services.ai_engine.consensus_engine import ForensicConsensusEngine
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -62,7 +61,9 @@ class AIDeepfakeEngine:
         return self._hf_analyzer
 
     @property
-    def consensus_engine(self) -> ForensicConsensusEngine:
+    def consensus_engine(self) -> "ForensicConsensusEngine":
+        """Lazy-load the consensus engine to prevent circular imports."""
+        from app.services.ai_engine.consensus_engine import ForensicConsensusEngine
         if self._consensus_engine is None:
             self._consensus_engine = ForensicConsensusEngine()
         return self._consensus_engine

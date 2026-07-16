@@ -2,7 +2,7 @@
 # HexShield AI — Routers Package
 # =============================================================================
 
-from app.routers import health, investigators, cases, submissions, analysis, reports, forensics
+from app.routers import health, investigators, cases, submissions, analysis, reports
 
 __all__ = [
     "health",
@@ -11,5 +11,4 @@ __all__ = [
     "submissions",
     "analysis",
     "reports",
-    "forensics",
 ]

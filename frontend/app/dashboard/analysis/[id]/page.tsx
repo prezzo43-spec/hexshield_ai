@@ -122,7 +122,8 @@ export default function AnalysisDetailPage() {
     setActionSuccess("");
     try {
       console.log("Generating report for submission:", submissionId, "format:", format);
-      const res = await generateReport(submissionId, format);
+      // Typecast the returned object to any to resolve Vercel build typecheck errors
+      const res = (await generateReport(submissionId, format)) as any;
       console.log("Report generated:", res);
       setActionSuccess(
         `${format} report generated successfully. File: ${res.report_filename}`

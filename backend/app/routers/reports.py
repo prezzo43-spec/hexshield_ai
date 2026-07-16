@@ -7,6 +7,7 @@
 # =============================================================================
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -21,6 +22,7 @@ from app.services.forensic_reporting import (
     JSONReportGenerator,
     PDFReportGenerator,
     ensure_reports_dir,
+    compute_report_hash,  # Solved: Imported at module-level to avoid execution overhead
 )
 
 router = APIRouter()
@@ -364,8 +366,7 @@ def download_report(report_id: str, db: Session = Depends(get_db)):
             detail="Report file not found on storage.",
         )
 
-    # Verify hash before serving
-    from app.services.forensic_reporting import compute_report_hash
+    # Verify hash before serving (uses module-level import now)
     current_hash = compute_report_hash(report_path.read_bytes())
     if current_hash != report["report_hash"]:
         raise HTTPException(
@@ -546,7 +547,6 @@ def certify_court_ready(
             ),
         )
 
-    from datetime import datetime, timezone
     db.execute(
         text("""
             UPDATE forensic_reports

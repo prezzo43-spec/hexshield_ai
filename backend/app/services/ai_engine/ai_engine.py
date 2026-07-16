@@ -101,7 +101,7 @@ class AIDeepfakeEngine:
 
         # Step 2: Pass Hugging Face raw signal results to the Groq multi-agent engine for logical check
         logger.info(f"AIDeepfakeEngine: Passing {filename} output to Multi-Agent Consensus Engine.")
-        consensus_result = self.consensus_engine.evaluate_analysis(
+        consensus_result = self.consensus_engine.evaluate_consensus(
             media_type=media_type,
             raw_results=result_dict
         )

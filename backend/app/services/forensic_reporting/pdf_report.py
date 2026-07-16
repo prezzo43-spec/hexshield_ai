@@ -17,7 +17,7 @@ from typing import Tuple
 from app.services.forensic_reporting.report_generator import (
     ForensicReportData,
     compute_report_hash,
-    ensure_reports_dir,
+    ensure_report_filepath,
     determine_overall_verdict,
 )
 
@@ -490,9 +490,8 @@ class PDFReportGenerator:
             # Compute report hash
             report_hash = compute_report_hash(report_bytes)
 
-            # Save to disk
-            reports_dir = ensure_reports_dir()
-            report_path = reports_dir / report_filename
+            # Save to disk with automatic nested directory building
+            report_path = ensure_report_filepath(report_filename)
             report_path.write_bytes(report_bytes)
 
             logger.info(

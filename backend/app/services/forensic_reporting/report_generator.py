@@ -134,7 +134,7 @@ class ForensicReportData:
 
 class ForensicReportAssembler:
     """
-    Assembles ForensicReportData from database query results.
+    Assembled ForensicReportData from database query results.
     Separates data collection from report rendering.
     """
 
@@ -277,6 +277,20 @@ def ensure_reports_dir() -> Path:
     reports_dir = Path(settings.REPORTS_DIR)
     reports_dir.mkdir(parents=True, exist_ok=True)
     return reports_dir
+
+
+def ensure_report_filepath(report_filename: str) -> Path:
+    """
+    Given a report filename (which may contain nested subfolders),
+    recursively resolve and create all parent directories inside the storage path,
+    and return the clean, absolute Path for writing.
+    """
+    base_dir = ensure_reports_dir()
+    full_path = base_dir / report_filename
+    
+    # Force recursive directory creation for cases and dates
+    full_path.parent.mkdir(parents=True, exist_ok=True)
+    return full_path
 
 
 def determine_overall_verdict(

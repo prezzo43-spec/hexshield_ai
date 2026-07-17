@@ -60,4 +60,6 @@ pytest-asyncio==0.23.6
 
 # Utilities
 python-dateutil==2.9.0
-openai>=1.0.0
+
+#requests
+openai==1.35.0

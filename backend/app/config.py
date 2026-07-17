@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     AI_CONFIDENCE_THRESHOLD: float = 0.75
     AI_INFERENCE_DEVICE: str = "cpu"
     HUGGINGFACE_API_TOKEN: str = ""
+    GROQ_API_KEY: str = ""
 
     # -------------------------------------------------------------------------
     # Security

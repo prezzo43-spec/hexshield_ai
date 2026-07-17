@@ -29,9 +29,15 @@ ACCESS_TOKEN_COOKIE = "hexshield_access_token"
 REFRESH_TOKEN_COOKIE = "hexshield_refresh_token"
 
 # Cookie settings
-COOKIE_SECURE = False      # Set True in production with HTTPS
-COOKIE_HTTPONLY = True     # Cannot be accessed by JavaScript
-COOKIE_SAMESITE = "lax"
+import os
+
+# Cookie settings — automatically detect production vs development
+IS_PRODUCTION = os.getenv("APP_ENV", "development") == "production"
+COOKIE_SECURE = IS_PRODUCTION       # True in production (HTTPS), False in dev
+COOKIE_HTTPONLY = True              # Cannot be accessed by JavaScript
+COOKIE_SAMESITE = "none" if IS_PRODUCTION else "lax"
+# SameSite=None required for cross-domain cookies (Vercel → Render)
+# SameSite=None requires Secure=True which is why we set both together
 
 
 # =============================================================================

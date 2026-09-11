@@ -17,43 +17,22 @@ import {
 import { checkDetailedHealth } from "@/services/api";
 import { formatDate } from "@/types";
 
-export default function HealthPage() {
-  const [health, setHealth] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [lastChecked, setLastChecked] = useState<string>("");
+type ComponentCardProps = {
+  icon: any;
+  name: string;
+  status: string;
+  detail?: string;
+  color: string;
+};
 
-  const fetchHealth = async () => {
-    setLoading(true);
-    try {
-      const data = await checkDetailedHealth();
-      setHealth(data);
-      setLastChecked(new Date().toISOString());
-    } catch (e) {
-      setHealth(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const ComponentCard = ({
-    icon: Icon,
-    name,
-    status,
-    detail,
-    color,
-  }: {
-    icon: any;
-    name: string;
-    status: string;
-    detail?: string;
-    color: string;
-  }) => (
+function ComponentCard({
+  icon: Icon,
+  name,
+  status,
+  detail,
+  color,
+}: ComponentCardProps) {
+  return (
     <div className="card">
       <div
         style={{
@@ -111,6 +90,47 @@ export default function HealthPage() {
       </div>
     </div>
   );
+}
+
+export default function HealthPage() {
+  const [health, setHealth] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [lastChecked, setLastChecked] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const fetchHealth = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await checkDetailedHealth();
+      setHealth(data);
+      setLastChecked(new Date().toISOString());
+    } catch (err) {
+      console.error(err);
+      setError(
+        "Unable to fetch health data. Ensure the backend is running and the API URL is configured correctly."
+      );
+      setHealth(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      if (!isMounted) return;
+      await fetchHealth();
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div>
@@ -121,15 +141,18 @@ export default function HealthPage() {
             Real-time status of all HexShield AI components
           </p>
         </div>
-        <button
-          className="btn btn-outline"
-          onClick={fetchHealth}
-          disabled={loading}
-        >
+        <button className="btn btn-outline" onClick={fetchHealth} disabled={loading}>
           <RefreshCw size={16} className={loading ? "spin" : ""} />
           Refresh
         </button>
       </div>
+
+      {error && (
+        <div className="alert alert-error" style={{ marginBottom: "1rem" }}>
+          <AlertTriangle size={16} style={{ flexShrink: 0, marginRight: 8 }} />
+          {error}
+        </div>
+      )}
 
       {lastChecked && (
         <p

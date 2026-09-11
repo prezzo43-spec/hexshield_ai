@@ -5,7 +5,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, Plus, Shield, AlertTriangle, CheckCircle } from "lucide-react";
+import { Users, Plus, AlertTriangle, CheckCircle } from "lucide-react";
 import { listInvestigators, createInvestigator } from "@/services/api";
 import { formatDate } from "@/types";
 
@@ -37,21 +37,34 @@ export default function InvestigatorsPage() {
     temporary_password: "",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {
       const data = await listInvestigators();
       setInvestigators(data.investigators || []);
-    } catch (e) {
+    } catch {
       setError("Failed to load investigators.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      if (!isMounted) {
+        return;
+      }
+      await fetchData();
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async () => {
     setError("");

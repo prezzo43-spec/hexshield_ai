@@ -74,10 +74,8 @@ export default function SubmitEvidencePage() {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
-      formData.append("submitted_by", form.submitted_by);
-      if (form.source_description) {
-        formData.append("source_description", form.source_description);
-      }
+      const normalizedSourceDescription = (form.source_description || "").trim() || selectedFile.name || "Evidence submission";
+      formData.append("source_description", normalizedSourceDescription);
       if (form.submission_notes) {
         formData.append("submission_notes", form.submission_notes);
       }

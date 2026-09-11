@@ -119,7 +119,6 @@ class ImageDeepfakeAnalyzer(BaseMediaAnalyzer):
                 self._deep_model = torch.load(
                     str(weights_path),
                     map_location=self.inference_device,
-                    weights_only=True,
                 )
                 self._deep_model.eval()
                 self._model_loaded = True

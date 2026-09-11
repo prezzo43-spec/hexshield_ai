@@ -52,7 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    checkAuth();
+    let isMounted = true;
+
+    const load = async () => {
+      if (!isMounted) {
+        return;
+      }
+      await checkAuth();
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
   }, [checkAuth]);
 
   const login = async (login_identifier: string, password: string) => {

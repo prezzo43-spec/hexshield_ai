@@ -430,6 +430,58 @@ class HuggingFaceDeepfakeAnalyzer:
             "errors": result.errors,
         }
 
+    def _fallback_video_result(self, data: bytes, filename: str) -> dict:
+        """Fall back to local video analysis if HF video inference fails."""
+        logger.info(f"Falling back to local video analyzer for {filename}")
+        try:
+            from app.services.ai_engine.video_analyzer import VideoDeepfakeAnalyzer
+            analyzer = VideoDeepfakeAnalyzer()
+            result = analyzer.analyze(data, filename)
+            return {
+                "media_type": "VIDEO",
+                "verdict": result.verdict,
+                "authenticity_score": result.authenticity_score,
+                "manipulation_confidence": result.manipulation_confidence,
+                "model_name": f"{result.model_name} (classical fallback)",
+                "model_version": result.model_version,
+                "total_frames_analyzed": result.total_frames_analyzed,
+                "temporal_inconsistency_score": result.temporal_inconsistency_score,
+                "temporal_inconsistencies": result.temporal_inconsistencies,
+                "analysis_notes": result.analysis_notes + [
+                    "Note: Hugging Face video inference unavailable. Local video analyzer used."
+                ],
+                "errors": result.errors,
+            }
+        except Exception as e:
+            logger.warning(f"Local video analyzer fallback failed: {e}")
+            return self._error_result("VIDEO", filename, [str(e)])
+
+    def _fallback_audio_result(self, data: bytes, filename: str) -> dict:
+        """Fall back to local audio analysis if HF audio inference fails."""
+        logger.info(f"Falling back to local audio analyzer for {filename}")
+        try:
+            from app.services.ai_engine.audio_analyzer import AudioDeepfakeAnalyzer
+            analyzer = AudioDeepfakeAnalyzer()
+            result = analyzer.analyze(data, filename)
+            return {
+                "media_type": "AUDIO",
+                "verdict": result.verdict,
+                "authenticity_score": result.authenticity_score,
+                "manipulation_confidence": result.manipulation_confidence,
+                "model_name": f"{result.model_name} (classical fallback)",
+                "model_version": result.model_version,
+                "total_segments_analyzed": result.total_segments_analyzed,
+                "spectral_analysis": result.spectral_analysis,
+                "voice_synthesis_score": result.voice_synthesis_score,
+                "analysis_notes": result.analysis_notes + [
+                    "Note: Hugging Face audio inference unavailable. Local audio analyzer used."
+                ],
+                "errors": result.errors,
+            }
+        except Exception as e:
+            logger.warning(f"Local audio analyzer fallback failed: {e}")
+            return self._error_result("AUDIO", filename, [str(e)])
+
     def _unsupported_result(self, filename: str, ext: str) -> dict:
         return {
             "media_type": "UNKNOWN",

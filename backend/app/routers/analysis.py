@@ -12,10 +12,87 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.database import get_db
+from app.routers.auth import require_role
 from app.services.hex_engine import HexTriageEngine
 from app.services.ai_engine import AIDeepfakeEngine, detect_media_type
 
 router = APIRouter()
+
+
+@router.get("/submissions/{submission_id}")
+def get_submission_details(
+    submission_id: str,
+    db: Session = Depends(get_db),
+):
+    """Return the submission record plus related case context for the analysis UI."""
+    try:
+        submission_uuid = uuid.UUID(str(submission_id))
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Submission {submission_id} not found.",
+        )
+
+    submission = db.execute(
+        text("""
+            SELECT
+                fs.id,
+                fs.case_id,
+                fs.original_filename,
+                fs.file_extension,
+                fs.file_size_bytes,
+                fs.mime_type_declared,
+                fs.mime_type_detected,
+                fs.sha256_hash,
+                fs.sha512_hash,
+                fs.storage_path,
+                fs.hex_analysis_complete,
+                fs.ai_analysis_complete,
+                fs.report_generated,
+                fs.ingestion_timestamp,
+                fs.source_description,
+                fs.submission_notes,
+                fs.submitted_by,
+                i.full_name AS submitted_by_name,
+                c.case_reference,
+                c.case_title,
+                c.status AS case_status
+            FROM file_submissions fs
+            LEFT JOIN investigators i ON fs.submitted_by = i.id
+            LEFT JOIN cases c ON fs.case_id = c.id
+            WHERE fs.id = :id
+        """),
+        {"id": str(submission_uuid)},
+    ).mappings().first()
+
+    if not submission:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Submission {submission_id} not found.",
+        )
+
+    return {
+        "id": str(submission["id"]),
+        "case_id": str(submission["case_id"]),
+        "case_reference": submission["case_reference"],
+        "case_title": submission["case_title"],
+        "case_status": submission["case_status"],
+        "original_filename": submission["original_filename"],
+        "file_extension": submission["file_extension"],
+        "file_size_bytes": submission["file_size_bytes"],
+        "mime_type_declared": submission["mime_type_declared"],
+        "mime_type_detected": submission["mime_type_detected"],
+        "sha256_hash": submission["sha256_hash"],
+        "sha512_hash": submission["sha512_hash"],
+        "hex_analysis_complete": submission["hex_analysis_complete"],
+        "ai_analysis_complete": submission["ai_analysis_complete"],
+        "report_generated": submission["report_generated"],
+        "ingestion_timestamp": str(submission["ingestion_timestamp"]),
+        "source_description": submission["source_description"],
+        "submission_notes": submission["submission_notes"],
+        "submitted_by": str(submission["submitted_by"]),
+        "submitted_by_name": submission["submitted_by_name"],
+    }
 
 
 # =============================================================================
@@ -327,6 +404,7 @@ def get_hex_analysis_results(
 def trigger_ai_analysis(
     submission_id: str,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(require_role("SYSTEM_ADMIN", "LEAD_INVESTIGATOR")),
 ):
     """
     Trigger Layer 2 AI deepfake detection analysis on a submitted file.
@@ -480,7 +558,7 @@ def trigger_ai_analysis(
             "voice_synthesis_score": result.voice_synthesis_score,
             "processing_duration_ms": result.processing_duration_ms,
             "inference_device": result.inference_device,
-            "analyzed_by": submission["submitted_by"],
+            "analyzed_by": current_investigator.get("id"),
         },
     )
 
@@ -573,9 +651,9 @@ def trigger_ai_analysis(
             "case_id": submission["case_id"],
             "submission_id": submission_id,
             "event_sequence": next_seq,
-            "actor_id": submission["submitted_by"],
-            "actor_role": submission["submitter_role"],
-            "actor_badge_number": submission["submitter_badge"],
+            "actor_id": current_investigator.get("id"),
+            "actor_role": current_investigator.get("role"),
+            "actor_badge_number": current_investigator.get("badge_number"),
             "event_description": (
                 f"Layer 2 AI deepfake analysis completed. "
                 f"Media type: {result.media_type}. "

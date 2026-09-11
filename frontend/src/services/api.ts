@@ -159,10 +159,21 @@ export const createInvestigator = (data: Record<string, unknown>) =>
 export const listCases = (status?: string) =>
   api
     .get("/api/v1/cases", { params: status ? { status_filter: status } : {} })
-    .then((r) => r.data);
+    .then((r) => {
+      const d = r.data;
+      // Handle both response formats
+      if (d.data) return { cases: d.data };
+      if (d.cases) return { cases: d.cases };
+      return { cases: [] };
+    });
 
 export const getCase = (id: string) =>
-  api.get(`/api/v1/cases/${id}`).then((r) => r.data);
+  api.get(`/api/v1/cases/${id}`).then((r) => {
+    const d = r.data;
+    // Handle both response formats
+    if (d.case) return { ...d.case, total_submissions: d.evidence_inventory?.total_count || 0 };
+    return d;
+  });
 
 export const createCase = (data: Record<string, unknown>) =>
   api.post("/api/v1/cases", data).then((r) => r.data);
@@ -172,7 +183,12 @@ export const updateCaseStatus = (id: string, status: string) =>
 
 // Submissions
 export const listSubmissions = (caseId: string) =>
-  api.get(`/api/v1/cases/${caseId}/submissions`).then((r) => r.data);
+  api.get(`/api/v1/cases/${caseId}/submissions`).then((r) => {
+    const d = r.data;
+    if (d.data) return { submissions: d.data };
+    if (d.submissions) return { submissions: d.submissions };
+    return { submissions: [] };
+  });
 
 export const getSubmission = (id: string) =>
   api.get(`/api/v1/submissions/${id}`).then((r) => r.data);

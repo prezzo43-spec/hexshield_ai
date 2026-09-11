@@ -9,13 +9,11 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  FolderOpen,
   Upload,
   FileSearch,
   Shield,
   Calendar,
   User,
-  Hash,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -27,7 +25,6 @@ import {
 } from "@/services/api";
 import {
   CASE_STATUS_BG,
-  RISK_LEVEL_BG,
   formatDate,
   formatFileSize,
   truncateHash,
@@ -44,25 +41,31 @@ export default function CaseDetailPage() {
   const [error, setError] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [caseId]);
-
   const fetchData = async () => {
     setLoading(true);
     try {
       const [caseRes, subsRes] = await Promise.all([
         getCase(caseId),
-        listSubmissions(caseId),
+        listSubmissions(caseId).catch(() => ({ submissions: [] })),
       ]);
       setCaseData(caseRes);
-      setSubmissions(subsRes.submissions || []);
+      // Handle both response formats for submissions
+      const subs = subsRes?.submissions || [];
+      setSubmissions(subs);
     } catch (e) {
       setError("Failed to load case data.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchData();
+    };
+
+    loadData();
+  }, [caseId]);
 
   const handleStatusUpdate = async (newStatus: string) => {
     setUpdatingStatus(true);

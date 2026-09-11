@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 # =============================================================================
 # HexShield AI — AI Engine Orchestrator
 # Layer 2: Multimodal AI Deepfake Detection Engine (Consensus Protected)
@@ -9,9 +11,9 @@
 import time
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from app.services.ai_engine.model_base import AIAnalysisResult, determine_ai_verdict
+from app.services.ai_engine.model_base import AIAnalysisResult
 from app.services.ai_engine.huggingface_analyzer import (
     HuggingFaceDeepfakeAnalyzer,
     IMAGE_EXTENSIONS,
@@ -19,6 +21,9 @@ from app.services.ai_engine.huggingface_analyzer import (
     AUDIO_EXTENSIONS,
 )
 from app.config import settings
+
+if TYPE_CHECKING:
+    from app.services.ai_engine.consensus_engine import ForensicConsensusEngine
 
 logger = logging.getLogger(__name__)
 

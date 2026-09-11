@@ -13,10 +13,7 @@ import {
   FileText,
   AlertTriangle,
   CheckCircle,
-  Clock,
   Download,
-  Hash,
-  Activity,
 } from "lucide-react";
 import {
   getSubmission,
@@ -57,10 +54,6 @@ export default function AnalysisDetailPage() {
   const [actionError, setActionError] = useState("");
   const [actionSuccess, setActionSuccess] = useState("");
 
-  useEffect(() => {
-    fetchAll();
-  }, [submissionId]);
-
   const fetchAll = async () => {
     setLoading(true);
     try {
@@ -85,6 +78,14 @@ export default function AnalysisDetailPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchAll();
+    };
+
+    loadData();
+  }, [submissionId]);
 
   const handleHexAnalysis = async () => {
     setRunningHex(true);

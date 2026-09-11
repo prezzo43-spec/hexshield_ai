@@ -6,14 +6,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  FolderOpen,
-  Plus,
-  Search,
-  Filter,
-  Calendar,
-  User,
-} from "lucide-react";
+import { FolderOpen, Plus, Search, User } from "lucide-react";
 import { listCases, listInvestigators, createCase } from "@/services/api";
 import { CASE_STATUS_BG, formatDate } from "@/types";
 
@@ -40,10 +33,6 @@ export default function CasesPage() {
     incident_date: "",
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -53,12 +42,29 @@ export default function CasesPage() {
       ]);
       setCases(casesData.cases || []);
       setInvestigators(investData.investigators || []);
-    } catch (e) {
+    } catch {
       setError("Failed to load data.");
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const load = async () => {
+      if (!isMounted) {
+        return;
+      }
+      await fetchData();
+    };
+
+    void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleSubmit = async () => {
     setError("");

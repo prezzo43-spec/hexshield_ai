@@ -1,240 +1,312 @@
 # HexShield AI
 
-**A Multi-Layered Forensic Engine for Malicious Streams and Manipulated Media**
+HexShield AI is a digital forensic investigation platform designed to analyze suspicious file artifacts, detect manipulation in media content, and preserve evidence integrity through a formal chain-of-custody workflow. The repository combines a FastAPI backend, a Next.js dashboard, and a PostgreSQL-backed evidence model to support forensic triage, AI-assisted media analysis, and report generation.
 
 ---
 
-## Overview
+## Executive Summary
 
-HexShield AI is a production-grade digital forensics platform developed as a
-capstone research project addressing two critical cybersecurity problems in Kenya:
-the proliferation of obfuscated malware delivered through MIME-spoofed file streams,
-and the rapid growth of AI-generated deepfake media used in fraud, blackmail, and
-manipulation of criminal evidence.
+This project addresses two important cyber-forensic problems:
 
-The system integrates three forensic layers into a unified investigative platform:
+- malicious content delivered through disguised or engineered binary streams
+- synthetic or manipulated media used to deceive investigators, victims, or judicial systems
 
-**Layer 1 — Hex-Level Binary Triage Engine**
-Analyzes raw file byte streams, verifies magic byte signatures against a knowledge
-base of known formats, and calculates Shannon Entropy to detect packing, encryption,
-and obfuscation. Detects MIME-type spoofing by comparing declared MIME types against
-magic-byte-detected formats.
+The system is organized into three layers:
 
-**Layer 2 — Multimodal AI Media Engine**
-Applies deep learning and classical signal processing to detect synthetic manipulation
-in images (ELA, noise analysis, compression artifacts), video (temporal consistency,
-frame-level anomaly scoring), and audio (MFCC analysis, voice synthesis detection).
+1. Hex-level binary triage
+2. Multimodal AI media analysis
+3. Forensic reporting and evidence preservation
 
-**Layer 3 — Forensic Preservation and Reporting Module**
-Generates SHA-256 and SHA-512 cryptographic hashes at ingestion, maintains an
-ISO/IEC 27037 compliant chain of custody in a Neon cloud PostgreSQL database, and
-produces court-ready PDF and machine-readable JSON forensic reports.
+The result is a full-stack prototype for evidence intake, case management, forensic analysis, and reporting within a single workflow.
 
 ---
 
-## Legal and Compliance Context
+## System Overview
 
-- **ISO/IEC 27037:2012** — Digital evidence identification, collection, and preservation
-- **Computer Misuse and Cybercrimes Act, 2018 (Kenya)** — Digital evidence admissibility
-- **Evidence Act (Kenya)** — Documentary and electronic evidence requirements
+HexShield AI supports the following operational pipeline:
 
-Chain-of-custody records are immutable at the database level. All forensic artifacts
-carry cryptographic integrity proofs. Reports include SHA-256 hashes for court verification.
+1. Investigators authenticate and access a protected dashboard.
+2. A case is created for a forensic investigation.
+3. Evidence is uploaded and stored with generated cryptographic hashes.
+4. File metadata and binary structure are analyzed for anomalies.
+5. Image, audio, and video files are assessed for manipulated content.
+6. Case evidence is correlated and summarized into forensic reports.
+7. Reports are stored, exported, and tied back to the chain-of-custody record.
+
+This repository currently contains the core application logic, database migration scripts, frontend dashboard views, and the forensic analysis services required for the workflow.
 
 ---
 
 ## Technology Stack
 
-| Component         | Technology                                      |
-|-------------------|-------------------------------------------------|
-| Frontend          | Next.js 16, React 19, TypeScript, Tailwind CSS  |
-| Backend API       | Python 3.12, FastAPI, Uvicorn                   |
-| Database          | PostgreSQL 16 (Neon Serverless, London)         |
-| ORM               | SQLAlchemy 2.0, psycopg2                        |
-| AI / ML           | PyTorch, TorchVision, OpenCV, librosa           |
-| Forensic Hashing  | hashlib (SHA-256, SHA-512)                      |
-| Binary Analysis   | python-magic, pefile, olefile                   |
-| Report Generation | ReportLab (PDF), JSON                           |
-| Authentication    | JWT (python-jose), passlib                      |
+### Backend
+- Python
+- FastAPI
+- SQLAlchemy
+- PostgreSQL
+- Pydantic + pydantic-settings
+- JWT-based authentication
+- bcrypt password hashing
+- hashlib for integrity checks
+
+### Frontend
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Axios for API requests
+
+### Forensic and AI Components
+- Shannon entropy analysis
+- Magic byte signature comparison
+- MIME verification and spoof detection
+- AI media analyzers for image, video, and audio
+- JSON and PDF forensic report generation
 
 ---
 
-## Project Structure
+## Architecture
 
+The application follows a layered architecture:
+
+### 1. Presentation Layer
+The frontend is built with Next.js App Router and provides investigator-facing screens for:
+- login and authentication
+- password changes
+- dashboard overview
+- case management
+- evidence submission
+- analysis review
+- report retrieval
+- investigator administration
+- health monitoring
+
+### 2. API Layer
+The backend exposes a FastAPI application with routers for:
+- health monitoring
+- authentication and session management
+- investigators
+- cases
+- evidence submissions
+- analysis execution
+- report generation
+
+### 3. Service Layer
+The backend service layer includes:
+- authentication and authorization logic
+- hex triage and entropy analysis
+- AI media analysis orchestration
+- forensic reporting utilities
+- evidence validation and storage handling
+
+### 4. Persistence Layer
+The database layer uses PostgreSQL with migration scripts for:
+- investigators
+- case records
+- evidence submissions
+- magic-byte references
+- forensic analysis results
+- chain-of-custody events
+- audit logs
+- forensic reports
+
+---
+
+## Core Features
+
+### Authentication and Access Control
+- investigator login and refresh-token flow
+- password hashing using bcrypt
+- role-aware dashboard navigation
+- first-login password change enforcement
+- account lockout and audit logging
+
+### Case and Evidence Workflow
+- creation and tracking of forensic cases
+- evidence intake and upload handling
+- file hashing at ingestion
+- metadata persistence for evidence records
+- audit and custody event tracking
+
+### Hex and Binary Analysis
+- magic-byte signature evaluation
+- entropy-based suspiciousness checks
+- file MIME and extension validation logic
+- comparison of declared vs detected formats
+- preliminary triage for obfuscation and malware indicators
+
+### AI Media Analysis
+The AI engine is organized for multimodal inspection:
+- image analysis for manipulation artifacts and compression anomalies
+- video analysis for frame-level patterns and temporal inconsistencies
+- audio analysis for spectral and voice synthesis indicators
+
+### Forensic Reporting
+- structured JSON report output
+- PDF report generation for court-facing documentation
+- integrity verification via cryptographic hashes
+- chain-of-custody linkage
+- reported findings tied to the underlying evidence record
+
+---
+
+## Repository Structure
+
+```text
 hexshield_ai/
-
+├── README.md
+├── render.yaml
 ├── backend/
-
 │   ├── app/
-
-│   │   ├── main.py                    # FastAPI application entry point
-
-│   │   ├── config.py                  # Settings from .env
-
-│   │   ├── database.py                # SQLAlchemy engine and session
-
-│   │   ├── models/                    # ORM models (Step 8)
-
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── models/
 │   │   ├── routers/
-
-│   │   │   ├── health.py              # Health check endpoints
-
-│   │   │   ├── investigators.py       # Investigator management
-
-│   │   │   ├── cases.py               # Case management
-
-│   │   │   ├── submissions.py         # File ingestion and evidence
-
-│   │   │   ├── analysis.py            # Hex and AI analysis triggers
-
-│   │   │   └── reports.py             # Report generation and download
-
-│   │   └── services/
-
-│   │       ├── hex_engine/
-
-│   │       │   ├── magic_bytes_db.py  # Magic byte signatures database
-
-│   │       │   ├── entropy.py         # Shannon Entropy calculator
-
-│   │       │   └── triage_engine.py   # Layer 1 core orchestrator
-
-│   │       ├── ai_engine/
-
-│   │       │   ├── model_base.py      # Abstract base analyzer
-
-│   │       │   ├── image_analyzer.py  # ELA, noise, compression analysis
-
-│   │       │   ├── video_analyzer.py  # Frame extraction, temporal analysis
-
-│   │       │   ├── audio_analyzer.py  # MFCC, spectral, voice synthesis
-
-│   │       │   └── ai_engine.py       # Layer 2 orchestrator
-
-│   │       └── forensic_reporting/
-
-│   │           ├── report_generator.py # Data assembly and utilities
-
-│   │           ├── json_report.py      # JSON report generator
-
-│   │           └── pdf_report.py       # PDF report generator
-
+│   │   │   ├── analysis.py
+│   │   │   ├── auth.py
+│   │   │   ├── cases.py
+│   │   │   ├── health.py
+│   │   │   ├── investigators.py
+│   │   │   ├── reports.py
+│   │   │   └── submissions.py
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   │   ├── ai_engine/
+│   │   │   │   ├── ai_engine.py
+│   │   │   │   ├── audio_analyzer.py
+│   │   │   │   ├── consensus_engine.py
+│   │   │   │   ├── huggingface_analyzer.py
+│   │   │   │   ├── image_analyzer.py
+│   │   │   │   ├── model_base.py
+│   │   │   │   ├── model_validation.py
+│   │   │   │   └── video_analyzer.py
+│   │   │   ├── auth.py
+│   │   │   ├── hex_engine/
+│   │   │   └── forensic_reporting/
+│   │   └── utils/
 │   ├── database/
-
 │   │   └── migrations/
-
-│   │       └── 001_initial_schema.sql # Complete PostgreSQL schema
-
+│   │       ├── 001_initial_schema.sql
+│   │       └── 002_add_authentication.sql
+│   ├── docs/
+│   ├── logs/
 │   ├── scripts/
-
-│   │   ├── run_migration.py           # Database migration runner
-
-│   │   └── test_ai_engine.py          # AI engine smoke test
-
+│   │   ├── clean_demo_data.py
+│   │   ├── create_admin.py
+│   │   ├── run_migration.py
+│   │   └── test_ai_engine.py
+│   ├── storage/
+│   │   ├── reports/
+│   │   └── uploads/
 │   ├── tests/
-
-│   │   ├── generate_test_files.py     # Simulated malicious file generator
-
-│   │   └── test_hex_engine.py         # 38 unit tests for Layer 1
-
-│   ├── .env.example                   # Environment variable template
-
-│   └── requirements.txt               # Python dependencies
-
-│
-
+│   │   ├── evaluation.py
+│   │   ├── generate_test_files.py
+│   │   ├── test_hex_engine.py
+│   │   └── test_files/
+│   ├── requirements.txt
+│   ├── requirements-dev.txt
+│   ├── requirements.lock.txt
+│   ├── Procfile
+│   ├── runtime.txt
+│   └── pip_audit_results.json
 ├── frontend/
-
 │   ├── app/
-
-│   │   ├── layout.tsx                 # Root layout
-
-│   │   ├── page.tsx                   # Root redirect
-
-│   │   └── dashboard/
-
-│   │       ├── layout.tsx             # Dashboard layout with sidebar
-
-│   │       ├── page.tsx               # Dashboard home
-
-│   │       ├── cases/                 # Case management pages
-
-│   │       ├── submit/                # Evidence submission page
-
-│   │       ├── analysis/              # Analysis queue and detail pages
-
-│   │       ├── reports/               # Reports page
-
-│   │       ├── investigators/         # Investigator management
-
-│   │       └── health/                # System health page
-
-│   └── src/
-
-│       ├── components/
-
-│       │   └── layout/
-
-│       │       └── Sidebar.tsx        # Navigation sidebar
-
-│       ├── services/
-
-│       │   └── api.ts                 # Backend API client
-
-│       └── types/
-
-│           └── index.ts               # Shared TypeScript types
-
-│
-
-├── docs/                              # Project documentation
-
-├── .gitignore
-
-└── README.md
+│   ├── public/
+│   ├── src/
+│   ├── package.json
+│   ├── eslint.config.mjs
+│   ├── next.config.ts
+│   ├── tsconfig.json
+│   └── README.md
+├── docs/
+└── temp_pip_download/
+```
 
 ---
 
-## Database Schema
+## Database Schema Highlights
 
-The relational schema consists of 11 tables organized into four functional groups:
+The database includes the following key entities:
 
-**Core Entities:** `investigators`, `cases`
+- investigators
+- cases
+- file_submissions
+- magic_byte_signatures
+- hex_analysis_results
+- ai_media_analysis_results
+- ai_analysis_frame_details
+- chain_of_custody_events
+- forensic_reports
+- system_audit_log
+- schema_migrations
 
-**Evidence Management:** `file_submissions`
-
-**Reference Data:** `magic_byte_signatures`
-
-**Analysis Layers:** `hex_analysis_results`, `ai_media_analysis_results`,
-`ai_analysis_frame_details`
-
-**Forensic Compliance:** `chain_of_custody_events` (INSERT ONLY),
-`forensic_reports`, `system_audit_log` (INSERT ONLY), `schema_migrations`
+The schema is designed for evidence integrity, auditability, and traceability. Chain-of-custody and audit entries are treated as append-only evidence of who handled a file and when.
 
 ---
 
-## Setup and Installation
+## Forensic Workflow
+
+The platform is built around a structured forensic process:
+
+1. Investigator registration and secure login
+2. Case setup and investigation context creation
+3. Evidence submission and hashing
+4. File-level triage and integrity checks
+5. AI media analysis for manipulation detection
+6. Aggregation of findings into forensic results
+7. Report generation and export
+8. Chain-of-custody and audit preservation
+
+This supports both technical investigation and legal documentation needs.
+
+---
+
+## Key Security and Integrity Considerations
+
+The project implements several important safeguards:
+
+- cryptographic hashing for evidence integrity
+- JWT-based authentication and refresh handling
+- bcrypt password hashing
+- host validation and security headers in the FastAPI app
+- immutable chain-of-custody and audit records in the database
+- evidence storage under controlled directories
+
+It also contains areas that are suitable for future hardening in production environments, such as stricter endpoint-level authorization enforcement, more comprehensive validation around uploaded files, and additional model verification controls.
+
+---
+
+## Setup Instructions
 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
-- A Neon PostgreSQL account (https://neon.tech)
+- PostgreSQL instance or compatible database service
+- Access to environment variables for backend configuration
 
 ### Backend Setup
 
 ```bash
 cd backend
-python -m venv venv --without-pip
-source venv/bin/activate  # Windows: .\venv\Scripts\Activate.ps1
-python -m ensurepip --upgrade
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-cp .env.example .env
-# Edit .env with your Neon DATABASE_URL and SECRET_KEY
+Create a `.env` file in the backend root with the required values, including:
+- DATABASE_URL
+- SECRET_KEY
+- APP_ENV
+- ALLOWED_ORIGINS
+- ALLOWED_HOSTS
 
+Then initialize the database and run the app:
+
+```bash
 python scripts/run_migration.py
-uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Setup
@@ -242,72 +314,56 @@ uvicorn app.main:app --reload --port 8000
 ```bash
 cd frontend
 npm install
-# Edit .env.local with NEXT_PUBLIC_API_URL=http://localhost:8000
 npm run dev
 ```
 
-### API Documentation
+The frontend communicates with the backend through the configured API base URL.
 
-Once the backend is running, visit:
-http://localhost:8000/api/docs
+---
+
+## API Access
+
+Once the backend is running, the API documentation is available at:
+
+- http://localhost:8000/api/docs
 
 ---
 
 ## Testing
 
+The repository includes testing utilities for forensic validation and engine checks.
+
 ```bash
 cd backend
-
-# Generate simulated malicious test files
 python tests/generate_test_files.py
-
-# Run Layer 1 unit tests (38 tests)
 python -m pytest tests/test_hex_engine.py -v
 ```
 
----
-
-## Forensic Workflow
-
-1. **Register Investigator** — Create analyst account with badge number and role
-2. **Open Case** — Create forensic case with jurisdiction and applicable law
-3. **Submit Evidence** — Upload file; SHA-256 and SHA-512 computed at ingestion
-4. **Run Hex Triage** — Magic byte verification, entropy analysis, MIME spoofing detection
-5. **Run AI Analysis** — Deepfake detection for images, video, and audio
-6. **Generate Report** — Court-ready PDF or machine-readable JSON with chain of custody
-7. **Certify Report** — Senior investigator marks report as court-ready
+Additional project scripts are available for migration and admin setup.
 
 ---
 
-## Key Forensic Features
+## Current Project Status
 
-- SHA-256 and SHA-512 hashes computed at ingestion and verified at every custody event
-- MIME spoofing detection comparing declared vs magic-byte-detected file types
-- Shannon Entropy analysis detecting encrypted, packed, or obfuscated payloads
-- Per-frame video analysis for temporal deepfake detection
-- ISO/IEC 27037 chain-of-custody events immutable at database level
-- Court-ready PDF reports with legal disclaimer and hash verification
-- Machine-readable JSON reports for SIEM integration
+This repository is structured as a functional capstone-grade forensic platform prototype, with implementations spanning:
 
----
+- backend API services
+- database schema and migrations
+- frontend dashboard workflows
+- evidence lifecycle management
+- forensic analysis logic
+- report generation
 
-## Stakeholders
-
-- Directorate of Criminal Investigations (DCI)
-- Office of the Director of Public Prosecutions (ODPP)
-- National Police Service
-- Judiciary of Kenya
-- Financial institutions and media organizations
+The project is suitable for academic demonstration, technical walkthroughs, and extension into a production-grade digital forensics platform.
 
 ---
 
-## Development Team
+## Academic and Research Context
 
-Capstone research project — Open university of Kenya
+HexShield AI is designed to model a modern forensic investigation environment where binary analysis and AI-based media assessment are brought together under a legal and evidentiary workflow. It aligns with investigations involving suspicious file artifacts, manipulated media, cybercrime evidence handling, and contemporary digital forensic reporting practices.
 
 ---
 
 ## License
 
-Developed as an academic capstone project under ISO/IEC 27037 forensic standards.
-All forensic methodologies are based on published standards and peer-reviewed literature.
+This project is intended for academic and research use. Please review repository-specific licensing and environment constraints before deploying it in operational or commercial environments.

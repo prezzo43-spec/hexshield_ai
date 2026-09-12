@@ -17,6 +17,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
+from zoneinfo import ZoneInfo
 
 # Native Pydantic serialization support
 from pydantic.dataclasses import dataclass
@@ -25,6 +26,20 @@ from dataclasses import field
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+KENYA_TIMEZONE = ZoneInfo("Africa/Nairobi")
+
+
+def format_kenya_timestamp(value: object) -> str:
+    """Format an ISO or database timestamp using Kenya local time."""
+    if isinstance(value, datetime):
+        timestamp = value
+    else:
+        timestamp = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+    return timestamp.astimezone(KENYA_TIMEZONE).isoformat()
 
 
 # =============================================================================
@@ -216,7 +231,7 @@ class ForensicReportAssembler:
                     hex_row.get("suspicious_sections_json") or []
                 ),
                 engine_version=hex_row["engine_version"],
-                analyzed_at=str(hex_row["analyzed_at"]),
+                analyzed_at=format_kenya_timestamp(hex_row["analyzed_at"]),
             )
 
         ai_summary = None
@@ -232,7 +247,7 @@ class ForensicReportAssembler:
                 model_name=ai_row["model_name"],
                 model_version=ai_row["model_version"],
                 processing_duration_ms=ai_row.get("processing_duration_ms"),
-                analyzed_at=str(ai_row["analyzed_at"]),
+                analyzed_at=format_kenya_timestamp(ai_row["analyzed_at"]),
             )
 
         custody_events = [
@@ -245,7 +260,7 @@ class ForensicReportAssembler:
                 actor_role=row["actor_role"],
                 hash_at_event=row.get("hash_at_event"),
                 hash_verified=row.get("hash_verified"),
-                event_timestamp=str(row["event_timestamp"]),
+                event_timestamp=format_kenya_timestamp(row["event_timestamp"]),
                 notes=row.get("notes"),
             )
             for row in custody_rows
@@ -254,7 +269,7 @@ class ForensicReportAssembler:
         return ForensicReportData(
             report_id=str(uuid.uuid4()),
             report_type=report_type,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(KENYA_TIMEZONE).isoformat(),
             issuing_authority=settings.REPORT_ISSUING_AUTHORITY,
             jurisdiction=settings.REPORT_JURISDICTION,
             case=case,

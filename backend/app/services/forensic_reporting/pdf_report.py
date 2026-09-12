@@ -10,12 +10,13 @@
 # =============================================================================
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple
 
 from app.services.forensic_reporting.report_generator import (
     ForensicReportData,
+    KENYA_TIMEZONE,
     compute_report_hash,
     ensure_report_filepath,
     determine_overall_verdict,
@@ -449,7 +450,7 @@ class PDFReportGenerator:
             report_bytes = buffer.getvalue()
 
             # Generate filename
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            timestamp = datetime.now(KENYA_TIMEZONE).strftime("%Y%m%d_%H%M%S")
             case_ref = report_data.case.case_reference.replace("-", "_")
             report_filename = (
                 f"HEXSHIELD_{case_ref}_{report_data.submission.id[:8]}"

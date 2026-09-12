@@ -57,6 +57,7 @@ export function formatFileSize(bytes: number): string {
 
 export function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleString("en-KE", {
+    timeZone: "Africa/Nairobi",
     year: "numeric",
     month: "short",
     day: "numeric",

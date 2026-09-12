@@ -38,6 +38,10 @@ services:
         value: 0.75
       - key: AI_INFERENCE_DEVICE
         value: cpu
+      - key: NEBIUS_BASE_URL
+        value: https://api.tokenfactory.nebius.com/v1/
+      - key: NEBIUS_MODEL
+        value: deepseek-ai/DeepSeek-R1-0528
       - key: REPORT_ISSUING_AUTHORITY
         value: HexShield AI Forensic Platform
       - key: REPORT_JURISDICTION

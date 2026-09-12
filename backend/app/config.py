@@ -65,6 +65,9 @@ class Settings(BaseSettings):
     AI_CONFIDENCE_THRESHOLD: float = 0.75
     AI_INFERENCE_DEVICE: str = "cpu"
     HUGGINGFACE_API_TOKEN: str = ""
+    NEBIUS_API_KEY: str = ""
+    NEBIUS_BASE_URL: str = "https://api.tokenfactory.nebius.com/v1/"
+    NEBIUS_MODEL: str = "deepseek-ai/DeepSeek-R1-0528"
     GROQ_API_KEY: str = ""
 
     # -------------------------------------------------------------------------

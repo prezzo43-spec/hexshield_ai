@@ -196,9 +196,11 @@ export default function SubmitEvidencePage() {
           <div style={{ display: "flex", gap: "0.75rem" }}>
             <button
               className="btn btn-primary"
-              onClick={() =>
-                router.push(`/dashboard/analysis/${result.submission_id}`)
-              }
+              onClick={() => {
+                if (result?.submission_id) {
+                  router.push(`/dashboard/analysis/${result.submission_id}`);
+                }
+              }}
             >
               <Shield size={16} />
               Run Analysis

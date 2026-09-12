@@ -60,6 +60,11 @@ export default function AnalysisDetailPage() {
       const sub = await getSubmission(submissionId);
       setSubmission(sub);
 
+      if (!sub?.case_id) {
+        setError("Submission data is missing case metadata.");
+        return;
+      }
+
       const [hexRes, aiRes, custodyRes, reportsRes] = await Promise.allSettled([
         getHexResults(submissionId),
         getAIResults(submissionId),
@@ -73,7 +78,7 @@ export default function AnalysisDetailPage() {
       if (reportsRes.status === "fulfilled")
         setReports(reportsRes.value.reports || []);
     } catch (e) {
-      setError("Failed to load submission data.");
+      setError("Failed to load submission data. Please try again or reload the page.");
     } finally {
       setLoading(false);
     }

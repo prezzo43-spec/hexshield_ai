@@ -164,13 +164,22 @@ async def submit_evidence(
                 "loc": "HexShield Central Core Digital Intake Engine", "hash": sha256_hash
             }
         )
+        case_row = db.execute(
+            text("SELECT case_reference FROM cases WHERE id = :case_id"),
+            {"case_id": str(case_id)},
+        ).mappings().first()
         db.commit()
 
         return {
             "status": "success",
             "message": "Evidence ingested and cataloged inside chain of custody record base.",
             "submission_id": submission_id,
+            "case_id": str(case_id),
+            "case_reference": case_row["case_reference"] if case_row else "UNKNOWN",
+            "original_filename": file.filename,
+            "file_size_bytes": file_size,
             "sha256_hash": sha256_hash,
+            "sha512_hash": sha512_hash,
             "detected_mime_type": detected_mime
         }
     except Exception as e:

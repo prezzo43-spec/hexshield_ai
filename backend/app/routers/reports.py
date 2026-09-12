@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.database import get_db
+from app.routers.auth import get_auth_investigator
 from app.services.forensic_reporting import (
     ForensicReportAssembler,
     JSONReportGenerator,
@@ -488,6 +489,7 @@ def certify_court_ready(
     report_id: str,
     payload: dict,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
 ):
     """
     Certify a report as court-ready.
@@ -511,25 +513,18 @@ def certify_court_ready(
             detail="Report is already certified as court-ready.",
         )
 
-    certifier_id = payload.get("certifier_id")
-    if not certifier_id:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="certifier_id is required.",
-        )
-
     certifier = db.execute(
         text("""
             SELECT id, role FROM investigators
             WHERE id = :id AND is_active = TRUE
         """),
-        {"id": certifier_id},
+        {"id": current_investigator["id"]},
     ).mappings().first()
 
     if not certifier:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Investigator {certifier_id} not found or inactive.",
+            detail="Current investigator was not found or is inactive.",
         )
 
     authorized_roles = {
@@ -557,7 +552,7 @@ def certify_court_ready(
             WHERE id = :id
         """),
         {
-            "certifier_id": certifier_id,
+            "certifier_id": certifier["id"],
             "certified_at": datetime.now(timezone.utc),
             "id": report_id,
         },
@@ -567,6 +562,6 @@ def certify_court_ready(
     return {
         "message": "Report certified as court-ready.",
         "report_id": report_id,
-        "certified_by": certifier_id,
+        "certified_by": str(certifier["id"]),
         "is_court_ready": True,
     }

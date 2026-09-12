@@ -85,9 +85,8 @@ class PDFReportGenerator:
             )
 
             styles = getSampleStyleSheet()
-            story = []
 
-            # Custom styles
+            # Custom typography styles
             title_style = ParagraphStyle(
                 "ForensicTitle",
                 parent=styles["Title"],
@@ -115,8 +114,8 @@ class PDFReportGenerator:
                 "ForensicNormal",
                 parent=styles["Normal"],
                 fontSize=9,
-                spaceAfter=4,
-                leading=14,
+                spaceAfter=2,
+                leading=13,
             )
             small_style = ParagraphStyle(
                 "ForensicSmall",
@@ -130,6 +129,7 @@ class PDFReportGenerator:
                 fontSize=7,
                 leading=10,
                 textColor=colors.HexColor("#333333"),
+                wordWrap='CJK',  # Forces unbroken strings/hashes to wrap at cell borders
             )
 
             overall_verdict = determine_overall_verdict(
@@ -144,12 +144,12 @@ class PDFReportGenerator:
             )
             verdict_color = colors.Color(*verdict_rgb)
 
+            story = []
+
             # =================================================================
             # HEADER
             # =================================================================
-            story.append(
-                Paragraph("HEXSHIELD AI", title_style)
-            )
+            story.append(Paragraph("HEXSHIELD AI", title_style))
             story.append(
                 Paragraph(
                     "Digital Forensic Analysis Report",
@@ -164,8 +164,7 @@ class PDFReportGenerator:
             )
             story.append(
                 Paragraph(
-                    f"Classification: "
-                    f"<b>{report_data.case.classification}</b>",
+                    f"Classification: <b>{report_data.case.classification}</b>",
                     small_style,
                 )
             )
@@ -178,27 +177,23 @@ class PDFReportGenerator:
             story.append(Paragraph("Report Information", heading_style))
 
             meta_data = [
-                ["Report ID", report_data.report_id],
-                ["Report Type", report_data.report_type],
-                ["Generated At", report_data.generated_at],
-                ["Issuing Authority", report_data.issuing_authority],
-                ["Jurisdiction", report_data.jurisdiction],
-                ["Overall Verdict", overall_verdict],
+                ["Report ID", Paragraph(report_data.report_id, mono_style)],
+                ["Report Type", Paragraph(report_data.report_type, normal_style)],
+                ["Generated At", Paragraph(report_data.generated_at, normal_style)],
+                ["Issuing Authority", Paragraph(report_data.issuing_authority, normal_style)],
+                ["Jurisdiction", Paragraph(report_data.jurisdiction, normal_style)],
+                ["Overall Verdict", Paragraph(f"<b>{overall_verdict}</b>", ParagraphStyle("VStyle", parent=normal_style, textColor=verdict_color))],
             ]
 
-            meta_table = Table(
-                meta_data,
-                colWidths=[4 * cm, 13 * cm],
-            )
+            meta_table = Table(meta_data, colWidths=[4 * cm, 13 * cm])
             meta_table.setStyle(
                 TableStyle([
                     ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
                     ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
                     ("PADDING", (0, 0), (-1, -1), 5),
-                    ("TEXTCOLOR", (1, 5), (1, 5), verdict_color),
-                    ("FONTNAME", (1, 5), (1, 5), "Helvetica-Bold"),
                 ])
             )
             story.append(meta_table)
@@ -209,14 +204,14 @@ class PDFReportGenerator:
             story.append(Paragraph("Case Information", heading_style))
 
             case_data = [
-                ["Case Reference", report_data.case.case_reference],
-                ["Case Title", report_data.case.case_title],
-                ["Classification", report_data.case.classification],
-                ["Jurisdiction", report_data.case.jurisdiction],
-                ["Applicable Law", report_data.case.applicable_law or "N/A"],
-                ["Lead Investigator", report_data.case.lead_investigator.full_name],
-                ["Badge Number", report_data.case.lead_investigator.badge_number or "N/A"],
-                ["Organization", report_data.case.lead_investigator.organization],
+                ["Case Reference", Paragraph(report_data.case.case_reference, normal_style)],
+                ["Case Title", Paragraph(report_data.case.case_title, normal_style)],
+                ["Classification", Paragraph(report_data.case.classification, normal_style)],
+                ["Jurisdiction", Paragraph(report_data.case.jurisdiction, normal_style)],
+                ["Applicable Law", Paragraph(report_data.case.applicable_law or "N/A", normal_style)],
+                ["Lead Investigator", Paragraph(report_data.case.lead_investigator.full_name, normal_style)],
+                ["Badge Number", Paragraph(report_data.case.lead_investigator.badge_number or "N/A", normal_style)],
+                ["Organization", Paragraph(report_data.case.lead_investigator.organization, normal_style)],
             ]
 
             case_table = Table(case_data, colWidths=[4 * cm, 13 * cm])
@@ -225,6 +220,7 @@ class PDFReportGenerator:
                     ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
                     ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
                     ("PADDING", (0, 0), (-1, -1), 5),
                 ])
@@ -237,13 +233,13 @@ class PDFReportGenerator:
             story.append(Paragraph("Evidence Record", heading_style))
 
             evidence_data = [
-                ["Submission ID", report_data.submission.id],
-                ["Original Filename", report_data.submission.original_filename],
-                ["File Size", f"{report_data.submission.file_size_bytes:,} bytes"],
-                ["Ingestion Timestamp", report_data.submission.ingestion_timestamp],
-                ["Submitted By", report_data.submission.submitted_by.full_name],
-                ["MIME Type (Declared)", report_data.submission.mime_type_declared or "N/A"],
-                ["MIME Type (Detected)", report_data.submission.mime_type_detected or "N/A"],
+                ["Submission ID", Paragraph(report_data.submission.id, mono_style)],
+                ["Original Filename", Paragraph(report_data.submission.original_filename, normal_style)],
+                ["File Size", Paragraph(f"{report_data.submission.file_size_bytes:,} bytes", normal_style)],
+                ["Ingestion Timestamp", Paragraph(report_data.submission.ingestion_timestamp, normal_style)],
+                ["Submitted By", Paragraph(report_data.submission.submitted_by.full_name, normal_style)],
+                ["MIME Type (Declared)", Paragraph(report_data.submission.mime_type_declared or "N/A", normal_style)],
+                ["MIME Type (Detected)", Paragraph(report_data.submission.mime_type_detected or "N/A", normal_style)],
             ]
 
             evidence_table = Table(evidence_data, colWidths=[4 * cm, 13 * cm])
@@ -252,6 +248,7 @@ class PDFReportGenerator:
                     ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
                     ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                     ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
                     ("PADDING", (0, 0), (-1, -1), 5),
                 ])
@@ -287,34 +284,26 @@ class PDFReportGenerator:
                 )
 
                 hex_table_data = [
-                    ["Risk Level", hex_data.overall_risk_level],
-                    ["Shannon Entropy", f"{hex_data.shannon_entropy:.6f} bits/byte"],
-                    ["Entropy Verdict", hex_data.entropy_verdict],
-                    ["MIME Spoof Detected", "YES" if hex_data.mime_spoof_detected else "NO"],
-                    ["File Format Identified", hex_data.file_format_identified],
-                    ["Threat Relevance", hex_data.threat_relevance],
-                    ["Suspicious Sections", str(hex_data.suspicious_sections_count)],
-                    ["Engine Version", hex_data.engine_version],
-                    ["Analyzed At", hex_data.analyzed_at],
+                    ["Risk Level", Paragraph(f"<b>{hex_data.overall_risk_level}</b>", ParagraphStyle("RStyle", parent=normal_style, textColor=colors.Color(*risk_color)))],
+                    ["Shannon Entropy", Paragraph(f"{hex_data.shannon_entropy:.6f} bits/byte", normal_style)],
+                    ["Entropy Verdict", Paragraph(hex_data.entropy_verdict, normal_style)],
+                    ["MIME Spoof Detected", Paragraph("YES" if hex_data.mime_spoof_detected else "NO", normal_style)],
+                    ["File Format Identified", Paragraph(hex_data.file_format_identified, normal_style)],
+                    ["Threat Relevance", Paragraph(hex_data.threat_relevance, normal_style)],
+                    ["Suspicious Sections", Paragraph(str(hex_data.suspicious_sections_count), normal_style)],
+                    ["Engine Version", Paragraph(hex_data.engine_version, normal_style)],
+                    ["Analyzed At", Paragraph(hex_data.analyzed_at, normal_style)],
                 ]
 
-                hex_table = Table(
-                    hex_table_data, colWidths=[5 * cm, 12 * cm]
-                )
+                hex_table = Table(hex_table_data, colWidths=[5 * cm, 12 * cm])
                 hex_table.setStyle(
                     TableStyle([
                         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
                         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
                         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
                         ("PADDING", (0, 0), (-1, -1), 5),
-                        (
-                            "TEXTCOLOR",
-                            (1, 0),
-                            (1, 0),
-                            colors.Color(*risk_color),
-                        ),
-                        ("FONTNAME", (1, 0), (1, 0), "Helvetica-Bold"),
                     ])
                 )
                 story.append(hex_table)
@@ -323,17 +312,13 @@ class PDFReportGenerator:
                 story.append(Paragraph(hex_data.risk_summary, normal_style))
 
                 if hex_data.mime_spoof_details:
-                    story.append(
-                        Paragraph("MIME Spoofing Details", subheading_style)
-                    )
-                    story.append(
-                        Paragraph(hex_data.mime_spoof_details, normal_style)
-                    )
+                    story.append(Paragraph("MIME Spoofing Details", subheading_style))
+                    story.append(Paragraph(hex_data.mime_spoof_details, normal_style))
 
                 story.append(Paragraph("Magic Bytes Extracted", subheading_style))
                 story.append(
                     Paragraph(
-                        hex_data.magic_bytes_extracted[:64] + "...",
+                        hex_data.magic_bytes_extracted,
                         mono_style,
                     )
                 )
@@ -349,9 +334,7 @@ class PDFReportGenerator:
             # LAYER 2 — AI ANALYSIS
             # =================================================================
             story.append(
-                Paragraph(
-                    "Layer 2: AI Deepfake Detection Analysis", heading_style
-                )
+                Paragraph("Layer 2: AI Deepfake Detection Analysis", heading_style)
             )
 
             if report_data.ai_analysis:
@@ -361,33 +344,25 @@ class PDFReportGenerator:
                 )
 
                 ai_table_data = [
-                    ["Verdict", ai_data.verdict],
-                    ["Media Type", ai_data.media_type],
-                    ["Authenticity Score", f"{ai_data.authenticity_score:.4f}"],
-                    ["Manipulation Confidence", f"{ai_data.manipulation_confidence:.4f}"],
-                    ["Model Name", ai_data.model_name],
-                    ["Model Version", ai_data.model_version],
-                    ["Processing Duration", f"{ai_data.processing_duration_ms} ms"],
-                    ["Analyzed At", ai_data.analyzed_at],
+                    ["Verdict", Paragraph(f"<b>{ai_data.verdict}</b>", ParagraphStyle("AIVStyle", parent=normal_style, textColor=colors.Color(*ai_verdict_color)))],
+                    ["Media Type", Paragraph(ai_data.media_type, normal_style)],
+                    ["Authenticity Score", Paragraph(f"{ai_data.authenticity_score:.4f}", normal_style)],
+                    ["Manipulation Confidence", Paragraph(f"{ai_data.manipulation_confidence:.4f}", normal_style)],
+                    ["Model Name", Paragraph(ai_data.model_name, normal_style)],
+                    ["Model Version", Paragraph(ai_data.model_version, normal_style)],
+                    ["Processing Duration", Paragraph(f"{ai_data.processing_duration_ms} ms", normal_style)],
+                    ["Analyzed At", Paragraph(ai_data.analyzed_at, normal_style)],
                 ]
 
-                ai_table = Table(
-                    ai_table_data, colWidths=[5 * cm, 12 * cm]
-                )
+                ai_table = Table(ai_table_data, colWidths=[5 * cm, 12 * cm])
                 ai_table.setStyle(
                     TableStyle([
                         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f0f0f0")),
                         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, -1), 9),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
                         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
                         ("PADDING", (0, 0), (-1, -1), 5),
-                        (
-                            "TEXTCOLOR",
-                            (1, 0),
-                            (1, 0),
-                            colors.Color(*ai_verdict_color),
-                        ),
-                        ("FONTNAME", (1, 0), (1, 0), "Helvetica-Bold"),
                     ])
                 )
                 story.append(ai_table)
@@ -402,9 +377,7 @@ class PDFReportGenerator:
             # =================================================================
             # CHAIN OF CUSTODY
             # =================================================================
-            story.append(
-                Paragraph("Chain of Custody", heading_style)
-            )
+            story.append(Paragraph("Chain of Custody", heading_style))
             story.append(
                 Paragraph(
                     "The following events constitute the complete chain of custody "
@@ -417,30 +390,28 @@ class PDFReportGenerator:
             for event in report_data.custody_chain:
                 story.append(
                     Paragraph(
-                        f"<b>Event {event.event_sequence}: "
-                        f"{event.event_type}</b>",
+                        f"<b>Event {event.event_sequence}: {event.event_type}</b>",
                         subheading_style,
                     )
                 )
                 custody_data = [
-                    ["Timestamp", event.event_timestamp],
-                    ["Actor", f"{event.actor_name} ({event.actor_badge or 'N/A'})"],
-                    ["Role", event.actor_role],
-                    ["Hash at Event", event.hash_at_event or "N/A"],
-                    ["Hash Verified", "YES" if event.hash_verified else "NO"],
-                    ["Description", event.event_description],
+                    ["Timestamp", Paragraph(event.event_timestamp, normal_style)],
+                    ["Actor", Paragraph(f"{event.actor_name} ({event.actor_badge or 'N/A'})", normal_style)],
+                    ["Role", Paragraph(event.actor_role, normal_style)],
+                    ["Hash at Event", Paragraph(event.hash_at_event or "N/A", mono_style)],
+                    ["Hash Verified", Paragraph("YES" if event.hash_verified else "NO", normal_style)],
+                    ["Description", Paragraph(event.event_description, normal_style)],
                 ]
                 if event.notes:
-                    custody_data.append(["Notes", event.notes])
+                    custody_data.append(["Notes", Paragraph(event.notes, normal_style)])
 
-                custody_table = Table(
-                    custody_data, colWidths=[4 * cm, 13 * cm]
-                )
+                custody_table = Table(custody_data, colWidths=[4 * cm, 13 * cm])
                 custody_table.setStyle(
                     TableStyle([
                         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#f5f5f5")),
                         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
                         ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
                         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")),
                         ("PADDING", (0, 0), (-1, -1), 4),
                     ])
@@ -453,9 +424,7 @@ class PDFReportGenerator:
             # =================================================================
             if report_data.examiner_notes:
                 story.append(Paragraph("Examiner Notes", heading_style))
-                story.append(
-                    Paragraph(report_data.examiner_notes, normal_style)
-                )
+                story.append(Paragraph(report_data.examiner_notes, normal_style))
 
             # =================================================================
             # LEGAL DISCLAIMER

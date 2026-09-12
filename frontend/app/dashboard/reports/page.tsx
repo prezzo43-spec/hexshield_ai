@@ -6,41 +6,81 @@
 
 import { useEffect, useState } from "react";
 import { FileText, Download, CheckCircle, Clock } from "lucide-react";
-import { listCases, listReports, getReportDownloadUrl } from "@/services/api";
+import {
+  listCases,
+  listReports,
+  getReportDownloadUrl,
+  certifyReport,
+} from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/types";
 
 export default function ReportsPage() {
+  const { investigator } = useAuth();
   const [allReports, setAllReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [certifyingId, setCertifyingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
   const [filter, setFilter] = useState("ALL");
 
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const casesData = await listCases();
+      const cases = casesData.cases || [];
+      const reportsArrays = await Promise.all(
+        cases.map((c: any) =>
+          listReports(c.id)
+            .then((r) =>
+              (r.reports || []).map((rep: any) => ({
+                ...rep,
+                case_reference: c.case_reference,
+                case_title: c.case_title,
+              }))
+            )
+            .catch(() => [])
+        )
+      );
+      setAllReports(reportsArrays.flat());
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAll = async () => {
+    const loadReports = async () => {
       try {
-        const casesData = await listCases();
-        const cases = casesData.cases || [];
-        const reportsArrays = await Promise.all(
-          cases.map((c: any) =>
-            listReports(c.id)
-              .then((r) =>
-                (r.reports || []).map((rep: any) => ({
-                  ...rep,
-                  case_reference: c.case_reference,
-                  case_title: c.case_title,
-                }))
-              )
-              .catch(() => [])
-          )
-        );
-        setAllReports(reportsArrays.flat());
+        await fetchAll();
       } catch (e) {
         console.error(e);
-      } finally {
-        setLoading(false);
       }
     };
-    fetchAll();
+    void loadReports();
   }, []);
+
+  const handleCertify = async (reportId: string) => {
+    setCertifyingId(reportId);
+    setActionError("");
+    try {
+      await certifyReport(reportId);
+      await fetchAll();
+    } catch (e: any) {
+      setActionError(
+        e?.response?.data?.detail || "The report could not be certified."
+      );
+    } finally {
+      setCertifyingId(null);
+    }
+  };
+
+  const canCertify = [
+    "SYSTEM_ADMIN",
+    "LEAD_INVESTIGATOR",
+    "REVIEWING_OFFICER",
+    "PROSECUTOR",
+  ].includes(investigator?.role || "");
 
   const filtered = allReports.filter((r) => {
     if (filter === "ALL") return true;
@@ -105,6 +145,8 @@ export default function ReportsPage() {
           </button>
         ))}
       </div>
+
+      {actionError && <div className="alert alert-error">{actionError}</div>}
 
       <div className="card">
         {loading ? (
@@ -221,13 +263,25 @@ export default function ReportsPage() {
                       {formatDate(r.generated_at)}
                     </td>
                     <td>
-                      <button
-                        className="btn btn-outline"
-                        onClick={() => window.open(getReportDownloadUrl(r.id), "_blank")}
-                      >
-                        <Download size={13} />
-                        Download
-                      </button>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          className="btn btn-outline"
+                          onClick={() => window.open(getReportDownloadUrl(r.id), "_blank")}
+                        >
+                          <Download size={13} />
+                          Download
+                        </button>
+                        {!r.is_court_ready && canCertify && (
+                          <button
+                            className="btn btn-primary"
+                            disabled={certifyingId === r.id}
+                            onClick={() => handleCertify(r.id)}
+                          >
+                            <CheckCircle size={13} />
+                            {certifyingId === r.id ? "Certifying..." : "Certify"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

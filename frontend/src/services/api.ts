@@ -266,3 +266,6 @@ export const listReports = (caseId: string) =>
 export const getReportDownloadUrl = (reportId: string) =>
   `${BASE_URL}/api/v1/reports/${reportId}/download`;
 
+export const certifyReport = (reportId: string) =>
+  api.patch(`/api/v1/reports/${reportId}/certify`, {}).then((r) => r.data);
+

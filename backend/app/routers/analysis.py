@@ -318,6 +318,15 @@ def trigger_hex_analysis(
         },
     )
 
+    db.execute(
+        text("""
+            UPDATE cases
+            SET status = 'UNDER_ANALYSIS'
+            WHERE id = :case_id AND status = 'OPEN'
+        """),
+        {"case_id": submission["case_id"]},
+    )
+
     db.commit()
 
     return {
@@ -665,6 +674,15 @@ def trigger_ai_analysis(
             "hash_at_event": submission["sha256_hash"],
             "notes": f"AI verdict: {result.verdict}",
         },
+    )
+
+    db.execute(
+        text("""
+            UPDATE cases
+            SET status = 'UNDER_ANALYSIS'
+            WHERE id = :case_id AND status = 'OPEN'
+        """),
+        {"case_id": submission["case_id"]},
     )
 
     db.commit()

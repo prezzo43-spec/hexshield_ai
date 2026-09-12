@@ -208,7 +208,9 @@ class ForensicReportAssembler:
             sha512_hash=submission_row["sha512_hash"],
             mime_type_declared=submission_row.get("mime_type_declared"),
             mime_type_detected=submission_row.get("mime_type_detected"),
-            ingestion_timestamp=str(submission_row["ingestion_timestamp"]),
+            ingestion_timestamp=format_kenya_timestamp(
+                submission_row["ingestion_timestamp"]
+            ),
             submitted_by=submitter,
         )
 

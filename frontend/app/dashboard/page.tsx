@@ -72,9 +72,12 @@ export default function DashboardPage() {
       {/* Page Header */}
       <div className="page-header">
         <div>
+          <div className="eyebrow" style={{ marginBottom: "0.45rem" }}>
+            Secure Evidence Operations / East Africa Desk
+          </div>
           <h1 className="page-title">Forensic Dashboard</h1>
           <p className="page-subtitle">
-            HexShield AI — Digital Evidence Analysis Platform
+            Command overview for active investigations, evidence integrity, and examiner review.
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
@@ -88,6 +91,18 @@ export default function DashboardPage() {
             <FolderOpen size={16} />
             View Cases
           </Link>
+        </div>
+      </div>
+
+      <div className="command-strip">
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+          <span style={{ color: "var(--success)", fontSize: "0.8rem" }}>●</span>
+          <span style={{ fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace", fontSize: "0.72rem", letterSpacing: "0.08em" }}>
+            OPERATIONS STATUS / NOMINAL
+          </span>
+        </div>
+        <div style={{ color: "var(--muted)", fontSize: "0.75rem" }}>
+          Evidence controls active • Session tier: {investigator?.role || "RESTRICTED"}
         </div>
       </div>
 
@@ -123,7 +138,7 @@ export default function DashboardPage() {
         <div className="stat-card">
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <FolderOpen size={18} color="var(--primary)" />
-            <span className="stat-label">Total Cases</span>
+            <span className="stat-label">Assigned Cases</span>
           </div>
           <div className="stat-value">{cases.length}</div>
           <div className="stat-sub">{openCases} open</div>
@@ -132,7 +147,7 @@ export default function DashboardPage() {
         <div className="stat-card">
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <FileSearch size={18} color="var(--secondary)" />
-            <span className="stat-label">Under Analysis</span>
+            <span className="stat-label">Active Analysis</span>
           </div>
           <div className="stat-value">{underAnalysis}</div>
           <div className="stat-sub">Active investigations</div>
@@ -141,7 +156,7 @@ export default function DashboardPage() {
         <div className="stat-card">
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <CheckCircle size={18} color="var(--success)" />
-            <span className="stat-label">Closed Cases</span>
+            <span className="stat-label">Closed Dossiers</span>
           </div>
           <div className="stat-value">{closedCases}</div>
           <div className="stat-sub">Completed</div>
@@ -170,7 +185,7 @@ export default function DashboardPage() {
           }}
         >
           <h2 className="section-title" style={{ margin: 0 }}>
-            Recent Cases
+            Recent Case Activity
           </h2>
           <Link
             href="/dashboard/cases"
@@ -200,7 +215,7 @@ export default function DashboardPage() {
                   <th>Case Reference</th>
                   <th>Title</th>
                   <th>Status</th>
-                  <th>Lead Investigator</th>
+                  <th>Case Custodian</th>
                   <th>Created</th>
                 </tr>
               </thead>

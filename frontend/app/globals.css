@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0f1e;
-  --foreground: #e2e8f0;
-  --card: #111827;
-  --card-border: #1e293b;
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --secondary: #6366f1;
-  --accent: #06b6d4;
-  --success: #10b981;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --muted: #64748b;
-  --sidebar-width: 260px;
+  --background: #081018;
+  --foreground: #e6edf3;
+  --card: #0e1a24;
+  --card-border: #203241;
+  --primary: #80b7d6;
+  --primary-dark: #5e94b4;
+  --secondary: #9aaeb9;
+  --accent: #d9a441;
+  --success: #63c49a;
+  --warning: #e2ad58;
+  --danger: #e47b72;
+  --muted: #78909d;
+  --sidebar-width: 278px;
 }
 
 * {
@@ -24,9 +24,11 @@
 
 body {
   background-color: var(--background);
+  background-image: linear-gradient(rgba(128, 183, 214, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(128, 183, 214, 0.025) 1px, transparent 1px);
+  background-size: 42px 42px;
   color: var(--foreground);
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   min-height: 100vh;
 }
 
@@ -50,15 +52,16 @@ body {
 .card {
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 1.5rem;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.14);
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 2px;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.025em;
@@ -69,7 +72,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 8px;
+  border-radius: 3px;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -78,11 +81,12 @@ body {
 }
 
 .btn-primary {
-  background: var(--primary);
-  color: white;
+  background: var(--accent);
+  color: #101820;
+  box-shadow: 0 5px 14px rgba(217, 164, 65, 0.16);
 }
 .btn-primary:hover {
-  background: var(--primary-dark);
+  background: #efbd5c;
 }
 
 .btn-outline {
@@ -103,7 +107,7 @@ body {
   width: 100%;
   background: var(--background);
   border: 1px solid var(--card-border);
-  border-radius: 8px;
+  border-radius: 3px;
   padding: 0.625rem 0.875rem;
   color: var(--foreground);
   font-size: 0.875rem;
@@ -132,7 +136,7 @@ select.input {
 
 .table-container {
   overflow-x: auto;
-  border-radius: 8px;
+  border-radius: 3px;
   border: 1px solid var(--card-border);
 }
 
@@ -174,11 +178,21 @@ tr:hover td {
 .stat-card {
   background: var(--card);
   border: 1px solid var(--card-border);
-  border-radius: 12px;
+  border-radius: 3px;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--accent);
 }
 
 .stat-label {
@@ -207,9 +221,10 @@ tr:hover td {
 }
 
 .page-title {
-  font-size: 1.5rem;
+  font-size: 1.65rem;
   font-weight: 700;
   color: var(--foreground);
+  letter-spacing: 0.015em;
 }
 
 .page-subtitle {
@@ -284,7 +299,7 @@ tr:hover td {
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 0.875rem;
-  border-radius: 8px;
+  border-radius: 3px;
   color: var(--muted);
   font-size: 0.875rem;
   font-weight: 500;
@@ -299,8 +314,29 @@ tr:hover td {
 }
 
 .sidebar-link.active {
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--primary);
+  background: rgba(217, 164, 65, 0.12);
+  color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.eyebrow {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.command-strip {
+  border: 1px solid var(--card-border);
+  background: rgba(14, 26, 36, 0.86);
+  border-left: 3px solid var(--accent);
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-group {

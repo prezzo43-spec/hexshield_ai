@@ -89,7 +89,7 @@ export default function Sidebar() {
       style={{
         width: "var(--sidebar-width)",
         minHeight: "100vh",
-        background: "var(--card)",
+        background: "#0a151e",
         borderRight: "1px solid var(--card-border)",
         display: "flex",
         flexDirection: "column",
@@ -102,7 +102,7 @@ export default function Sidebar() {
       {/* Logo */}
       <div
         style={{
-          padding: "1.5rem 1.25rem",
+          padding: "1.35rem 1.25rem 1.1rem",
           borderBottom: "1px solid var(--card-border)",
         }}
       >
@@ -111,14 +111,14 @@ export default function Sidebar() {
             style={{
               width: 36,
               height: 36,
-              background: "var(--primary)",
-              borderRadius: 8,
+              background: "var(--accent)",
+              borderRadius: 3,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Shield size={20} color="white" />
+            <Shield size={20} color="#101820" />
           </div>
           <div>
             <div
@@ -129,7 +129,7 @@ export default function Sidebar() {
                 lineHeight: 1.2,
               }}
             >
-              HexShield AI
+              HEXSHIELD AI
             </div>
             <div
               style={{
@@ -138,9 +138,24 @@ export default function Sidebar() {
                 marginTop: 2,
               }}
             >
-              Forensic Platform v1.0.0
+              NATIONAL FORENSIC OPERATIONS
             </div>
           </div>
+        </div>
+        <div
+          style={{
+            marginTop: "1rem",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace",
+            fontSize: "0.64rem",
+            letterSpacing: "0.08em",
+            color: "var(--muted)",
+          }}
+        >
+          <span>SECURE CHANNEL</span>
+          <span style={{ color: "var(--success)" }}>● ONLINE</span>
         </div>
       </div>
 
@@ -154,6 +169,9 @@ export default function Sidebar() {
           gap: "0.25rem",
         }}
       >
+        <div className="eyebrow" style={{ padding: "0 0.875rem 0.55rem" }}>
+          Operations Console
+        </div>
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -258,8 +276,10 @@ export default function Sidebar() {
           color: "var(--muted)",
         }}
       >
-        <div>ISO/IEC 27037 Compliant</div>
-        <div style={{ marginTop: 2 }}>Republic of Kenya</div>
+        <div style={{ fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace" }}>
+          ACCESS TIER: {investigator?.role || "RESTRICTED"}
+        </div>
+        <div style={{ marginTop: 4 }}>ISO/IEC 27037 • KENYA OPERATIONS</div>
       </div>
     </aside>
   );

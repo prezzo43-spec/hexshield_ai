@@ -50,6 +50,8 @@ export default function LoginPage() {
       style={{
         minHeight: "100vh",
         background: "var(--background)",
+        backgroundImage: "linear-gradient(135deg, rgba(217,164,65,0.08), transparent 35%), linear-gradient(rgba(128,183,214,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(128,183,214,0.025) 1px, transparent 1px)",
+        backgroundSize: "auto, 42px 42px, 42px 42px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -70,16 +72,16 @@ export default function LoginPage() {
             style={{
               width: 64,
               height: 64,
-              background: "var(--primary)",
-              borderRadius: 16,
+              background: "var(--accent)",
+              borderRadius: 3,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               marginBottom: "1rem",
-              boxShadow: "0 0 32px rgba(59,130,246,0.3)",
+              boxShadow: "0 0 32px rgba(217,164,65,0.2)",
             }}
           >
-            <Shield size={32} color="white" />
+            <Shield size={32} color="#101820" />
           </div>
           <h1
             style={{
@@ -89,7 +91,7 @@ export default function LoginPage() {
               letterSpacing: "-0.025em",
             }}
           >
-            HexShield AI
+            HEXSHIELD AI
           </h1>
           <p
             style={{
@@ -99,7 +101,7 @@ export default function LoginPage() {
               textAlign: "center",
             }}
           >
-            Digital Forensic Platform
+            NATIONAL DIGITAL FORENSICS DIRECTORATE
           </p>
           <p
             style={{
@@ -108,12 +110,15 @@ export default function LoginPage() {
               marginTop: "0.25rem",
             }}
           >
-            Republic of Kenya — ISO/IEC 27037 Compliant
+            SECURE ACCESS GATEWAY / KENYA OPERATIONS
           </p>
         </div>
 
         {/* Login Card */}
         <div className="card">
+          <div className="eyebrow" style={{ marginBottom: "0.8rem" }}>
+            Clearance Verification
+          </div>
           <h2
             style={{
               fontSize: "1.125rem",
@@ -130,7 +135,7 @@ export default function LoginPage() {
               marginBottom: "1.5rem",
             }}
           >
-            Authorised personnel only. All access is logged and monitored.
+            Authorised personnel only. Every access event is recorded for review.
           </p>
 
           {error && (
@@ -211,7 +216,7 @@ export default function LoginPage() {
             padding: "1rem",
             background: "rgba(239,68,68,0.05)",
             border: "1px solid rgba(239,68,68,0.15)",
-            borderRadius: 8,
+            borderRadius: 3,
             fontSize: "0.75rem",
             color: "var(--muted)",
             lineHeight: 1.6,

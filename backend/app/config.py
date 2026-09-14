@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
+    MFA_ISSUER: str = "HexShield AI Secure Operations"
+    IP_RISK_API_KEY: str = ""
+    IP_RISK_BLOCK_VPN: bool = False
+    IP_RISK_BLOCK_PROXY: bool = True
+    IP_RISK_BLOCK_TOR: bool = True
+    IP_RISK_BLOCK_DATACENTER: bool = False
+    IP_RISK_MIN_FRAUD_SCORE: int = 90
 
     # -------------------------------------------------------------------------
     # File Storage

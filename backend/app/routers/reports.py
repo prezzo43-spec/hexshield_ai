@@ -29,6 +29,58 @@ from app.services.forensic_reporting import (
 router = APIRouter()
 
 
+def ensure_report_access(
+    db: Session,
+    report_id: str,
+    investigator: dict,
+) -> None:
+    """Allow administrators or investigators assigned to the report case."""
+    if investigator["role"] == "SYSTEM_ADMIN":
+        return
+
+    accessible = db.execute(
+        text("""
+            SELECT r.id
+            FROM forensic_reports r
+            JOIN cases c ON c.id = r.case_id
+            WHERE r.id = :report_id
+              AND c.lead_investigator_id = :investigator_id
+        """),
+        {
+            "report_id": report_id,
+            "investigator_id": investigator["id"],
+        },
+    ).first()
+    if not accessible:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Report not found in an accessible case.",
+        )
+
+
+def ensure_case_access(
+    db: Session,
+    case_id: str,
+    investigator: dict,
+) -> None:
+    if investigator["role"] == "SYSTEM_ADMIN":
+        return
+
+    accessible = db.execute(
+        text("""
+            SELECT id FROM cases
+            WHERE id = :case_id
+              AND lead_investigator_id = :investigator_id
+        """),
+        {"case_id": case_id, "investigator_id": investigator["id"]},
+    ).first()
+    if not accessible:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found in your assigned investigations.",
+        )
+
+
 # =============================================================================
 # HELPER — Fetch all data needed for report generation
 # =============================================================================
@@ -214,6 +266,26 @@ def generate_report(
             detail="report_format must be JSON or PDF.",
         )
 
+    ensure_submission_access = db.execute(
+        text("""
+            SELECT fs.case_id
+            FROM file_submissions fs
+            JOIN cases c ON c.id = fs.case_id
+            WHERE fs.id = :submission_id
+              AND (:is_admin = TRUE OR c.lead_investigator_id = :investigator_id)
+        """),
+        {
+            "submission_id": submission_id,
+            "is_admin": current_investigator["role"] == "SYSTEM_ADMIN",
+            "investigator_id": current_investigator["id"],
+        },
+    ).first()
+    if not ensure_submission_access:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Submission not found in an accessible case.",
+        )
+
     # Fetch all data
     data = _fetch_report_data(submission_id, db)
 
@@ -347,6 +419,7 @@ def download_report(
     Download a generated forensic report file.
     Verifies the file hash before serving.
     """
+    ensure_report_access(db, report_id, current_investigator)
     report = db.execute(
         text("""
             SELECT
@@ -408,6 +481,7 @@ def list_case_reports(
     """
     List all forensic reports generated for a case.
     """
+    ensure_case_access(db, case_id, current_investigator)
     case = db.execute(
         text("SELECT id FROM cases WHERE id = :id"),
         {"id": case_id},
@@ -460,6 +534,7 @@ def get_report(
     """
     Retrieve metadata for a single forensic report.
     """
+    ensure_report_access(db, report_id, current_investigator)
     result = db.execute(
         text("""
             SELECT
@@ -511,6 +586,7 @@ def certify_court_ready(
     Must be performed by a senior investigator.
     Once certified, the report hash is the legal baseline.
     """
+    ensure_report_access(db, report_id, current_investigator)
     report = db.execute(
         text("SELECT id, is_court_ready FROM forensic_reports WHERE id = :id"),
         {"id": report_id},

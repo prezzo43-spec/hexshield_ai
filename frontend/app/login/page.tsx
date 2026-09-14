@@ -15,6 +15,8 @@ export default function LoginPage() {
 
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,9 +31,12 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await login(loginIdentifier, password);
+      await login(loginIdentifier, password, mfaCode);
       router.push("/dashboard");
     } catch (e: any) {
+      if (e?.response?.headers?.["x-mfa-required"] === "true") {
+        setMfaRequired(true);
+      }
       setError(
         e?.response?.data?.detail ||
           "Login failed. Please check your credentials."
@@ -156,6 +161,21 @@ export default function LoginPage() {
               autoComplete="username"
             />
           </div>
+
+          {mfaRequired && (
+            <div className="form-group">
+              <label className="label">Authenticator Code</label>
+              <input
+                className="input"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="6-digit code"
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onKeyDown={handleKeyDown}
+              />
+            </div>
+          )}
 
           <div className="form-group">
             <label className="label">Password</label>

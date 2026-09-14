@@ -16,7 +16,12 @@ import {
   FileText,
 } from "lucide-react";
 import Link from "next/link";
-import { listCases, listInvestigators, checkDetailedHealth } from "@/services/api";
+import {
+  listCases,
+  listInvestigators,
+  checkDetailedHealth,
+  getEvaluationSummary,
+} from "@/services/api";
 import { CASE_STATUS_BG, formatDate } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,6 +31,7 @@ export default function DashboardPage() {
   const [cases, setCases] = useState<any[]>([]);
   const [investigators, setInvestigators] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
+  const [evaluation, setEvaluation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,10 +41,12 @@ export default function DashboardPage() {
         ? listInvestigators().catch(() => ({ investigators: [] }))
         : Promise.resolve({ investigators: [] }),
       checkDetailedHealth().catch(() => null),
-    ]).then(([casesData, investData, healthData]) => {
+      isAdmin ? getEvaluationSummary().catch(() => null) : Promise.resolve(null),
+    ]).then(([casesData, investData, healthData, evaluationData]) => {
       setCases(casesData.cases || []);
       setInvestigators(investData.investigators || []);
       setHealth(healthData);
+      setEvaluation(evaluationData);
       setLoading(false);
     });
   }, [isAdmin]);
@@ -122,6 +130,24 @@ export default function DashboardPage() {
               {health.components?.hex_engine?.status} | AI Engine:{" "}
               {health.components?.ai_engine?.status}
             </span>
+          </div>
+        </div>
+      )}
+
+      {isAdmin && evaluation && (
+        <div className="command-strip" style={{ marginBottom: "1.5rem" }}>
+          <div>
+            <div className="eyebrow" style={{ marginBottom: "0.35rem" }}>
+              Evaluation Readiness / Layer 1
+            </div>
+            <div style={{ fontSize: "0.82rem" }}>
+              {evaluation.dataset_size} labelled files • prototype benchmark
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "1.2rem", fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace", fontSize: "0.72rem" }}>
+            <span>ACC {evaluation.metrics?.accuracy_percent ?? "--"}%</span>
+            <span>F1 {evaluation.metrics?.f1_score_percent ?? "--"}%</span>
+            <span style={{ color: "var(--warning)" }}>FPR {evaluation.metrics?.false_positive_rate_percent ?? "--"}%</span>
           </div>
         </div>
       )}

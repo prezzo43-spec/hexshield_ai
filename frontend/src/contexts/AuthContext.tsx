@@ -28,7 +28,7 @@ interface Investigator {
 interface AuthContextType {
   investigator: Investigator | null;
   loading: boolean;
-  login: (login_identifier: string, password: string) => Promise<void>;
+  login: (login_identifier: string, password: string, mfa_code?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -68,10 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [checkAuth]);
 
-  const login = async (login_identifier: string, password: string) => {
+  const login = async (login_identifier: string, password: string, mfa_code = "") => {
     const res = await api.post("/api/v1/auth/login", {
       login_identifier,
       password,
+      ...(mfa_code ? { mfa_code } : {}),
     });
     setInvestigator(res.data.investigator);
   };

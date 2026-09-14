@@ -12,19 +12,50 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.database import get_db
-from app.routers.auth import require_role
+from app.routers.auth import get_auth_investigator, require_role
 from app.services.hex_engine import HexTriageEngine
 from app.services.ai_engine import AIDeepfakeEngine, detect_media_type
 
 router = APIRouter()
 
 
+def ensure_submission_access(
+    db: Session,
+    submission_id: str,
+    investigator: dict,
+) -> None:
+    """Allow administrators or the investigator assigned to the case."""
+    if investigator["role"] == "SYSTEM_ADMIN":
+        return
+
+    accessible = db.execute(
+        text("""
+            SELECT fs.id
+            FROM file_submissions fs
+            JOIN cases c ON c.id = fs.case_id
+            WHERE fs.id = :submission_id
+              AND c.lead_investigator_id = :investigator_id
+        """),
+        {
+            "submission_id": submission_id,
+            "investigator_id": investigator["id"],
+        },
+    ).first()
+    if not accessible:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Submission not found in an accessible case.",
+        )
+
+
 @router.get("/submissions/{submission_id}")
 def get_submission_details(
     submission_id: str,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
 ):
     """Return the submission record plus related case context for the analysis UI."""
+    ensure_submission_access(db, submission_id, current_investigator)
     try:
         submission_uuid = uuid.UUID(str(submission_id))
     except ValueError:
@@ -103,6 +134,9 @@ def get_submission_details(
 def trigger_hex_analysis(
     submission_id: str,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(
+        require_role("LEAD_INVESTIGATOR", "FORENSIC_ANALYST")
+    ),
 ):
     """
     Trigger Layer 1 hex triage analysis on a submitted file.
@@ -115,6 +149,8 @@ def trigger_hex_analysis(
     5. Updates the submission status flag
     6. Records an ANALYSIS custody event
     """
+
+    ensure_submission_access(db, submission_id, current_investigator)
 
     # Step 1 — Retrieve submission record
     submission = db.execute(
@@ -359,10 +395,12 @@ def trigger_hex_analysis(
 def get_hex_analysis_results(
     submission_id: str,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
 ):
     """
     Retrieve existing hex triage analysis results for a submission.
     """
+    ensure_submission_access(db, submission_id, current_investigator)
     result = db.execute(
         text("""
             SELECT
@@ -429,6 +467,8 @@ def trigger_ai_analysis(
     6. Updates submission status flag
     7. Records an ANALYSIS custody event
     """
+
+    ensure_submission_access(db, submission_id, current_investigator)
 
     # Step 1 — Retrieve submission record
     submission = db.execute(
@@ -710,10 +750,12 @@ def trigger_ai_analysis(
 def get_ai_analysis_results(
     submission_id: str,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
 ):
     """
     Retrieve existing AI analysis results for a submission.
     """
+    ensure_submission_access(db, submission_id, current_investigator)
     result = db.execute(
         text("""
             SELECT
@@ -762,11 +804,13 @@ def get_ai_analysis_results(
 def get_chain_of_custody(
     submission_id: str,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
 ):
     """
     Retrieve the complete chain of custody for a file submission.
     Returns all custody events in chronological order.
     """
+    ensure_submission_access(db, submission_id, current_investigator)
     submission = db.execute(
         text("SELECT id FROM file_submissions WHERE id = :id"),
         {"id": submission_id},

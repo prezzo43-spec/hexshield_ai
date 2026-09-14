@@ -20,6 +20,18 @@ services:
         value: 30
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: 7
+      - key: MFA_ISSUER
+        value: HexShield AI Secure Operations
+      - key: IP_RISK_BLOCK_VPN
+        value: false
+      - key: IP_RISK_BLOCK_PROXY
+        value: true
+      - key: IP_RISK_BLOCK_TOR
+        value: true
+      - key: IP_RISK_BLOCK_DATACENTER
+        value: false
+      - key: IP_RISK_MIN_FRAUD_SCORE
+        value: 90
       - key: UPLOAD_DIR
         value: storage/uploads
       - key: REPORTS_DIR

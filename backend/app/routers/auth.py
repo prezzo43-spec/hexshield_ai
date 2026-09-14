@@ -4,6 +4,8 @@
 # =============================================================================
 
 import logging
+import json
+import pyotp
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -20,6 +22,8 @@ from app.services.auth import (
     hash_password,
     validate_password_strength,
 )
+from app.config import settings
+from app.services.network_risk import assess_ip, client_ip_from_request
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -110,6 +114,7 @@ def login(
     """
     login_identifier = payload.get("login_identifier", "").strip()
     password = payload.get("password", "")
+    mfa_code = str(payload.get("mfa_code", "")).strip()
 
     if not login_identifier or not password:
         raise HTTPException(
@@ -118,8 +123,34 @@ def login(
         )
 
     # Capture request metadata for explicit account access audit logging
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = client_ip_from_request(request)
     user_agent = request.headers.get("user-agent", "unknown")
+
+    network_risk = assess_ip(client_ip)
+    if network_risk["blocked"]:
+        db.execute(
+            text("""
+                INSERT INTO system_audit_log (
+                    event_category, event_action, event_description,
+                    ip_address, user_agent, success, error_message, metadata_json
+                ) VALUES (
+                    'SECURITY', 'LOGIN_BLOCKED_NETWORK_RISK', :description,
+                    :ip, :user_agent, FALSE, :error, CAST(:metadata AS JSONB)
+                )
+            """),
+            {
+                "description": f"Login blocked by network risk policy: {network_risk['reason']}",
+                "ip": client_ip,
+                "user_agent": user_agent,
+                "error": "Network risk policy denied access.",
+                "metadata": json.dumps(network_risk),
+            },
+        )
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied by the network security policy.",
+        )
 
     # Authenticate
     investigator, error = authenticate_investigator(
@@ -164,6 +195,15 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=error,
         )
+
+    if investigator.get("mfa_enabled"):
+        secret = investigator.get("mfa_secret")
+        if not secret or not mfa_code or not pyotp.TOTP(secret).verify(mfa_code):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="A valid authenticator code is required.",
+                headers={"X-MFA-Required": "true"},
+            )
 
     # Create tokens
     token_data = {
@@ -315,7 +355,48 @@ def get_me(
         "role": investigator["role"],
         "organization": investigator["organization"],
         "first_login": investigator.get("first_login", False),
+        "mfa_enabled": investigator.get("mfa_enabled", False),
     }
+
+
+@router.post("/auth/mfa/setup")
+def setup_mfa(
+    db: Session = Depends(get_db),
+    investigator: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
+    """Create a TOTP secret; verification enables MFA for the administrator."""
+    secret = pyotp.random_base32()
+    uri = pyotp.TOTP(secret).provisioning_uri(
+        name=investigator["email"],
+        issuer_name=settings.MFA_ISSUER,
+    )
+    db.execute(
+        text("UPDATE investigators SET mfa_secret = :secret WHERE id = :id"),
+        {"secret": secret, "id": investigator["id"]},
+    )
+    db.commit()
+    return {"message": "Scan the URI with an authenticator app, then verify it.", "otpauth_uri": uri}
+
+
+@router.post("/auth/mfa/verify")
+def verify_mfa(
+    payload: dict,
+    db: Session = Depends(get_db),
+    investigator: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
+    secret = investigator.get("mfa_secret")
+    code = str(payload.get("code", "")).strip()
+    if not secret or not code or not pyotp.TOTP(secret).verify(code):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid authenticator code.",
+        )
+    db.execute(
+        text("UPDATE investigators SET mfa_enabled = TRUE WHERE id = :id"),
+        {"id": investigator["id"]},
+    )
+    db.commit()
+    return {"message": "Multi-factor authentication enabled.", "mfa_enabled": True}
 
 
 @router.post("/auth/change-password")

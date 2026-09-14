@@ -246,6 +246,7 @@ def authenticate_investigator(
                 id, full_name, email, badge_number,
                 organization, role, is_active,
                 is_badge_verified, first_login,
+                mfa_enabled, mfa_secret,
                 password_hash, failed_login_count,
                 locked_until
             FROM investigators
@@ -362,7 +363,7 @@ def get_current_investigator(
             SELECT
                 id, full_name, email, badge_number,
                 organization, role, is_active,
-                is_badge_verified, first_login
+                is_badge_verified, first_login, mfa_enabled, mfa_secret
             FROM investigators
             WHERE id = :id AND is_active = TRUE
         """),

@@ -145,6 +145,9 @@ export const checkHealth = () =>
 export const checkDetailedHealth = () =>
   api.get("/api/health/detailed").then((r) => r.data);
 
+export const getEvaluationSummary = () =>
+  api.get("/api/v1/evaluation/summary").then((r) => r.data);
+
 // Investigators
 export const listInvestigators = () =>
   api.get("/api/v1/investigators").then((r) => r.data);

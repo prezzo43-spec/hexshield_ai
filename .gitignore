@@ -39,6 +39,8 @@ backend/reports/
 # Logs
 *.log
 logs/
+!frontend/app/dashboard/logs/
+!frontend/app/dashboard/logs/page.tsx
 
 # VS Code
 .vscode/

@@ -32,7 +32,12 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Migration file path
 # -----------------------------------------------------------------------------
-MIGRATION_FILE = Path(__file__).parent.parent / "database" / "migrations" / "001_initial_schema.sql"
+MIGRATIONS_DIR = Path(__file__).parent.parent / "database" / "migrations"
+MIGRATIONS = [
+    ("001_initial_schema.sql", "1.0.0"),
+    ("002_add_authentication.sql", "1.1.0"),
+    ("003_add_mfa.sql", "1.2.0"),
+]
 
 
 def compute_checksum(sql: str) -> str:
@@ -66,7 +71,7 @@ def run_migration() -> None:
     logger.info("=" * 60)
     logger.info(f"Environment : {settings.APP_ENV}")
     logger.info(f"Database    : {settings.DATABASE_URL[:40]}...")
-    logger.info(f"Migration   : {MIGRATION_FILE.name}")
+    logger.info(f"Migrations  : {len(MIGRATIONS)} versioned files")
     logger.info("=" * 60)
 
     # Step 1 — Verify database connection
@@ -76,36 +81,30 @@ def run_migration() -> None:
         sys.exit(1)
     logger.info("Database connection OK.")
 
-    # Step 2 — Read migration file
-    logger.info("Step 2: Reading migration file...")
-    if not MIGRATION_FILE.exists():
-        logger.critical(f"Migration file not found: {MIGRATION_FILE}")
-        sys.exit(1)
+    # Step 2 — Execute every pending numbered migration in order.
+    logger.info("Step 2: Applying pending migrations...")
+    for filename, version in MIGRATIONS:
+        migration_file = MIGRATIONS_DIR / filename
+        if not migration_file.exists():
+            logger.critical(f"Migration file not found: {migration_file}")
+            sys.exit(1)
 
-    sql_content = MIGRATION_FILE.read_text(encoding="utf-8")
-    checksum = compute_checksum(sql_content)
-    logger.info(f"Migration file loaded. Checksum: {checksum[:16]}...")
+        if migration_already_applied(version):
+            logger.info("  [SKIP] %s (%s already applied)", filename, version)
+            continue
 
-    # Step 3 — Check if already applied
-    logger.info("Step 3: Checking migration history...")
-    if migration_already_applied("1.0.0"):
-        logger.warning("Migration 1.0.0 has already been applied. Skipping.")
-        logger.info("Schema is up to date. Nothing to do.")
-        sys.exit(0)
-    logger.info("Migration 1.0.0 not yet applied. Proceeding.")
-
-    # Step 4 — Execute migration
-    logger.info("Step 4: Executing migration SQL...")
-    try:
-        with engine.connect() as conn:
-            # Execute the entire SQL file as a single transaction
-            conn.execute(text(sql_content))
-            conn.commit()
-        logger.info("Migration SQL executed successfully.")
-    except Exception as e:
-        logger.critical(f"Migration failed during SQL execution: {e}")
-        logger.critical("The database may be in a partial state. Review manually.")
-        sys.exit(1)
+        sql_content = migration_file.read_text(encoding="utf-8")
+        checksum = compute_checksum(sql_content)
+        logger.info("  [RUN] %s checksum=%s...", filename, checksum[:16])
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(sql_content))
+                conn.commit()
+            logger.info("  [OK] %s", filename)
+        except Exception as e:
+            logger.critical("Migration failed during %s: %s", filename, e)
+            logger.critical("The database may be in a partial state. Review manually.")
+            sys.exit(1)
 
     # Step 5 — Verify tables were created
     logger.info("Step 5: Verifying tables were created...")

@@ -14,7 +14,7 @@ except Exception:  # pragma: no cover - fallback for environments without libmag
     magic = None
 
 from app.database import get_db
-from app.routers.auth import require_role
+from app.routers.auth import get_auth_investigator, require_role
 from app.config import settings
 
 router = APIRouter(prefix="", tags=["Evidence Ingestion & Submissions"])
@@ -22,6 +22,62 @@ router = APIRouter(prefix="", tags=["Evidence Ingestion & Submissions"])
 # Establish upload directory footprint
 UPLOAD_DIR = settings.UPLOAD_DIR
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+@router.get("/cases/{case_id}/submissions")
+def list_submissions(
+    case_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
+):
+    """List evidence submissions for an accessible case."""
+    case = db.execute(
+        text("""
+            SELECT id
+            FROM cases
+            WHERE id = :case_id
+              AND (:is_admin = TRUE OR lead_investigator_id = :investigator_id)
+        """),
+        {
+            "case_id": str(case_id),
+            "is_admin": current_investigator["role"] == "SYSTEM_ADMIN",
+            "investigator_id": current_investigator["id"],
+        },
+    ).first()
+    if not case:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Case not found in an accessible investigation.",
+        )
+
+    rows = db.execute(
+        text("""
+            SELECT
+                fs.id,
+                fs.case_id,
+                fs.original_filename,
+                fs.file_extension,
+                fs.file_size_bytes,
+                fs.mime_type_declared,
+                fs.mime_type_detected,
+                fs.sha256_hash,
+                fs.hex_analysis_complete,
+                fs.ai_analysis_complete,
+                fs.report_generated,
+                fs.ingestion_timestamp,
+                i.full_name AS submitted_by_name
+            FROM file_submissions fs
+            LEFT JOIN investigators i ON i.id = fs.submitted_by
+            WHERE fs.case_id = :case_id
+            ORDER BY fs.ingestion_timestamp DESC
+        """),
+        {"case_id": str(case_id)},
+    ).mappings().all()
+    return {
+        "case_id": str(case_id),
+        "total": len(rows),
+        "submissions": [dict(row) for row in rows],
+    }
 
 @router.post("/cases/{case_id}/submissions", status_code=status.HTTP_201_CREATED)
 async def submit_evidence(

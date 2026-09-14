@@ -198,7 +198,11 @@ def create_investigator(
 
 
 @router.patch("/investigators/{investigator_id}/verify-badge")
-def verify_badge(investigator_id: str, db: Session = Depends(get_db)):
+def verify_badge(
+    investigator_id: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
     """
     Mark an investigator's badge as verified by the Republic of Kenya.
     Required before the investigator can log in.
@@ -238,6 +242,7 @@ def reset_password(
     investigator_id: str,
     payload: dict,
     db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
 ):
     """
     Admin resets an investigator's password.
@@ -293,7 +298,11 @@ def reset_password(
 
 
 @router.patch("/investigators/{investigator_id}/unlock")
-def unlock_account(investigator_id: str, db: Session = Depends(get_db)):
+def unlock_account(
+    investigator_id: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
     """
     Unlock an investigator account that was locked due to failed login attempts.
     """
@@ -328,7 +337,11 @@ def unlock_account(investigator_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/investigators/{investigator_id}/deactivate")
-def deactivate_investigator(investigator_id: str, db: Session = Depends(get_db)):
+def deactivate_investigator(
+    investigator_id: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
     """
     Deactivate an investigator account.
     Records are never deleted — only deactivated.

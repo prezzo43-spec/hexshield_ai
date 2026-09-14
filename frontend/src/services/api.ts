@@ -158,6 +158,24 @@ export const getInvestigator = (id: string) =>
 export const createInvestigator = (data: Record<string, unknown>) =>
   api.post("/api/v1/investigators", data).then((r) => r.data);
 
+export const verifyInvestigatorBadge = (id: string) =>
+  api.patch(`/api/v1/investigators/${id}/verify-badge`).then((r) => r.data);
+
+export const unlockInvestigator = (id: string) =>
+  api.patch(`/api/v1/investigators/${id}/unlock`).then((r) => r.data);
+
+export const deactivateInvestigator = (id: string) =>
+  api.patch(`/api/v1/investigators/${id}/deactivate`).then((r) => r.data);
+
+export const resetInvestigatorPassword = (id: string, newPassword: string) =>
+  api.patch(`/api/v1/investigators/${id}/reset-password`, { new_password: newPassword }).then((r) => r.data);
+
+export const setupMfa = () =>
+  api.post("/api/v1/auth/mfa/setup").then((r) => r.data);
+
+export const verifyMfa = (code: string) =>
+  api.post("/api/v1/auth/mfa/verify", { code }).then((r) => r.data);
+
 // Cases
 export const listCases = (status?: string) =>
   api
@@ -242,21 +260,16 @@ export const generateReport = (
         report_format: format,
     ...(examinerNotes && { examiner_notes: examinerNotes }),
   });
-  return fetch(`${BASE_URL}/api/v1/submissions/${submissionId}/reports?${params}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-  }).then(async (res) => {
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    return res.json();
-  });
+  return api
+    .post(`/api/v1/submissions/${submissionId}/reports`, undefined, { params })
+    .then((r) => r.data);
 };
 
 export const fetchReport = (
   reportId: string
 ): Promise<{ report_id: string; report_generated: boolean }> => {
-  return fetch(`${BASE_URL}/api/v1/reports/${reportId}`).then(async (res) => {
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    const data = await res.json();
+  return api.get(`/api/v1/reports/${reportId}`).then((r) => {
+    const data = r.data;
     return {
       report_id: reportId,
       report_generated: data.report_generated || false,

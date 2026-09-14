@@ -6,7 +6,13 @@
 
 import { useEffect, useState } from "react";
 import { Users, Plus, AlertTriangle, CheckCircle } from "lucide-react";
-import { listInvestigators, createInvestigator } from "@/services/api";
+import {
+  listInvestigators,
+  createInvestigator,
+  verifyInvestigatorBadge,
+  unlockInvestigator,
+  deactivateInvestigator,
+} from "@/services/api";
 import { formatDate } from "@/types";
 
 const ROLES = [
@@ -25,6 +31,7 @@ export default function InvestigatorsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [actionId, setActionId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     full_name: "",
@@ -45,6 +52,25 @@ export default function InvestigatorsPage() {
       setError("Failed to load investigators.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleInvestigatorAction = async (
+    action: (id: string) => Promise<unknown>,
+    id: string,
+    successMessage: string
+  ) => {
+    setActionId(id);
+    setError("");
+    setSuccess("");
+    try {
+      await action(id);
+      setSuccess(successMessage);
+      await fetchData();
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || "Investigator action failed.");
+    } finally {
+      setActionId(null);
     }
   };
 
@@ -301,6 +327,7 @@ export default function InvestigatorsPage() {
                   <th>Organization</th>
                   <th>Role</th>
                   <th>Status</th>
+                  <th>Controls</th>
                   <th>Registered</th>
                 </tr>
               </thead>
@@ -355,6 +382,57 @@ export default function InvestigatorsPage() {
                       >
                         {inv.is_active ? "Active" : "Inactive"}
                       </span>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                        {!inv.is_badge_verified && (
+                          <button
+                            className="btn btn-outline"
+                            disabled={actionId === inv.id}
+                            onClick={() =>
+                              handleInvestigatorAction(
+                                verifyInvestigatorBadge,
+                                inv.id,
+                                `${inv.full_name}'s badge was verified.`
+                              )
+                            }
+                          >
+                            Verify Badge
+                          </button>
+                        )}
+                        {inv.locked_until && (
+                          <button
+                            className="btn btn-outline"
+                            disabled={actionId === inv.id}
+                            onClick={() =>
+                              handleInvestigatorAction(
+                                unlockInvestigator,
+                                inv.id,
+                                `${inv.full_name}'s account was unlocked.`
+                              )
+                            }
+                          >
+                            Unlock
+                          </button>
+                        )}
+                        {inv.is_active && (
+                          <button
+                            className="btn btn-danger"
+                            disabled={actionId === inv.id}
+                            onClick={() => {
+                              if (window.confirm(`Deactivate ${inv.full_name}?`)) {
+                                void handleInvestigatorAction(
+                                  deactivateInvestigator,
+                                  inv.id,
+                                  `${inv.full_name}'s account was deactivated.`
+                                );
+                              }
+                            }}
+                          >
+                            Deactivate
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td
                       style={{

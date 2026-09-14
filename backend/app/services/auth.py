@@ -15,6 +15,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.config import settings
 
@@ -246,7 +247,6 @@ def authenticate_investigator(
                 id, full_name, email, badge_number,
                 organization, role, is_active,
                 is_badge_verified, first_login,
-                mfa_enabled, mfa_secret,
                 password_hash, failed_login_count,
                 locked_until
             FROM investigators
@@ -265,6 +265,26 @@ def authenticate_investigator(
         return None, "Invalid credentials."
 
     investigator = dict(result)
+    investigator["mfa_enabled"] = False
+    investigator["mfa_secret"] = None
+
+    try:
+        mfa_result = db.execute(
+            text("""
+                SELECT mfa_enabled, mfa_secret
+                FROM investigators
+                WHERE id = :id
+            """),
+            {"id": investigator["id"]},
+        ).mappings().first()
+        if mfa_result:
+            investigator["mfa_enabled"] = bool(mfa_result["mfa_enabled"])
+            investigator["mfa_secret"] = mfa_result["mfa_secret"]
+    except SQLAlchemyError:
+        db.rollback()
+        logger.warning(
+            "MFA columns are unavailable; continuing with password authentication."
+        )
 
     # Check account lockout
     if is_account_locked(investigator):
@@ -363,7 +383,7 @@ def get_current_investigator(
             SELECT
                 id, full_name, email, badge_number,
                 organization, role, is_active,
-                is_badge_verified, first_login, mfa_enabled, mfa_secret
+                is_badge_verified, first_login
             FROM investigators
             WHERE id = :id AND is_active = TRUE
         """),
@@ -373,4 +393,24 @@ def get_current_investigator(
     if not result:
         return None
 
-    return dict(result)
+    investigator = dict(result)
+    investigator["mfa_enabled"] = False
+    investigator["mfa_secret"] = None
+    try:
+        mfa_result = db.execute(
+            text("""
+                SELECT mfa_enabled, mfa_secret
+                FROM investigators
+                WHERE id = :id
+            """),
+            {"id": investigator["id"]},
+        ).mappings().first()
+        if mfa_result:
+            investigator["mfa_enabled"] = bool(mfa_result["mfa_enabled"])
+            investigator["mfa_secret"] = mfa_result["mfa_secret"]
+    except SQLAlchemyError:
+        db.rollback()
+        logger.warning(
+            "MFA columns are unavailable while validating a session."
+        )
+    return investigator

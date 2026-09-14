@@ -33,19 +33,19 @@ const NAV_ITEMS = [
     label: "Cases",
     href: "/dashboard/cases",
     icon: FolderOpen,
-    roles: ["ALL"],
+    roles: ["SYSTEM_ADMIN", "LEAD_INVESTIGATOR", "FORENSIC_ANALYST", "REVIEWING_OFFICER", "PROSECUTOR", "READ_ONLY"],
   },
   {
     label: "Submit Evidence",
     href: "/dashboard/submit",
     icon: Upload,
-    roles: ["SYSTEM_ADMIN", "LEAD_INVESTIGATOR", "FORENSIC_ANALYST"],
+    roles: ["LEAD_INVESTIGATOR", "FORENSIC_ANALYST"],
   },
   {
     label: "Analysis",
     href: "/dashboard/analysis",
     icon: Cpu,
-    roles: ["SYSTEM_ADMIN", "LEAD_INVESTIGATOR", "FORENSIC_ANALYST"],
+    roles: ["LEAD_INVESTIGATOR", "FORENSIC_ANALYST"],
   },
   {
     label: "Reports",

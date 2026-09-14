@@ -14,10 +14,12 @@ import {
   CheckCircle,
   Hash,
 } from "lucide-react";
-import { listCases, listInvestigators, submitFile } from "@/services/api";
+import { listCases, submitFile } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatFileSize } from "@/types";
 
 export default function SubmitEvidencePage() {
+  const { investigator } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -25,7 +27,6 @@ export default function SubmitEvidencePage() {
   const preselectedCaseId = searchParams.get("case_id") || "";
 
   const [cases, setCases] = useState<any[]>([]);
-  const [investigators, setInvestigators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -34,16 +35,15 @@ export default function SubmitEvidencePage() {
 
   const [form, setForm] = useState({
     case_id: preselectedCaseId,
-    submitted_by: "",
+    submitted_by: investigator?.id || "",
     source_description: "",
     submission_notes: "",
   });
 
   useEffect(() => {
-    Promise.all([listCases(), listInvestigators()])
-      .then(([casesData, investData]) => {
+    listCases()
+      .then((casesData) => {
         setCases(casesData.cases || []);
-        setInvestigators(investData.investigators || []);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -61,8 +61,8 @@ export default function SubmitEvidencePage() {
       setError("Please select a case.");
       return;
     }
-    if (!form.submitted_by) {
-      setError("Please select the submitting investigator.");
+    if (!investigator?.id) {
+      setError("Your investigator session is not available. Please sign in again.");
       return;
     }
     if (!selectedFile) {
@@ -241,21 +241,10 @@ export default function SubmitEvidencePage() {
               </select>
             </div>
             <div className="form-group">
-              <label className="label">Submitting Investigator *</label>
-              <select
-                className="input"
-                value={form.submitted_by}
-                onChange={(e) =>
-                  setForm({ ...form, submitted_by: e.target.value })
-                }
-              >
-                <option value="">Select investigator...</option>
-                {investigators.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.full_name} — {inv.badge_number || inv.role}
-                  </option>
-                ))}
-              </select>
+              <label className="label">Submitting Investigator</label>
+              <div className="input" style={{ color: "var(--muted)" }}>
+                {investigator?.full_name || "Authenticated investigator"}
+              </div>
             </div>
           </div>
 

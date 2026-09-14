@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.database import get_db
-from app.routers.auth import get_auth_investigator
+from app.routers.auth import get_auth_investigator, require_role
 from app.services.forensic_reporting import (
     ForensicReportAssembler,
     JSONReportGenerator,
@@ -197,7 +197,9 @@ def generate_report(
         description="Optional examiner notes to include in the report",
     ),
     db: Session = Depends(get_db),
-    current_investigator: dict = Depends(get_auth_investigator),
+    current_investigator: dict = Depends(
+        require_role("LEAD_INVESTIGATOR", "FORENSIC_ANALYST")
+    ),
 ):
     """
     Generate a forensic report for a file submission.
@@ -541,7 +543,6 @@ def certify_court_ready(
         )
 
     authorized_roles = {
-        "SYSTEM_ADMIN",
         "LEAD_INVESTIGATOR",
         "REVIEWING_OFFICER",
         "PROSECUTOR",

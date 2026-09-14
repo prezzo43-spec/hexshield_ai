@@ -76,7 +76,6 @@ export default function ReportsPage() {
   };
 
   const canCertify = [
-    "SYSTEM_ADMIN",
     "LEAD_INVESTIGATOR",
     "REVIEWING_OFFICER",
     "PROSECUTOR",

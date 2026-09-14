@@ -18,7 +18,10 @@ router = APIRouter()
 
 
 @router.get("/investigators")
-def list_investigators(db: Session = Depends(get_db)):
+def list_investigators(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
     """
     List all investigators in the system.
     """
@@ -52,7 +55,11 @@ def list_investigators(db: Session = Depends(get_db)):
 
 
 @router.get("/investigators/{investigator_id}")
-def get_investigator(investigator_id: str, db: Session = Depends(get_db)):
+def get_investigator(
+    investigator_id: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
     """
     Retrieve a single investigator by ID.
     """
@@ -89,7 +96,11 @@ def get_investigator(investigator_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/investigators", status_code=status.HTTP_201_CREATED)
-def create_investigator(payload: dict, db: Session = Depends(get_db)):
+def create_investigator(
+    payload: dict,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_role("SYSTEM_ADMIN")),
+):
     """
     Register a new investigator in the system.
     Admin sets a temporary password. Investigator must change it on first login.
@@ -108,6 +119,12 @@ def create_investigator(payload: dict, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Temporary password too weak: {msg}",
+        )
+
+    if payload["role"] == "SYSTEM_ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="New SYSTEM_ADMIN accounts must be provisioned through a controlled bootstrap process.",
         )
 
     # Check for duplicate email
@@ -388,10 +405,10 @@ def get_activity_logs(
 def require_admin_email(
     investigator: dict = Depends(get_auth_investigator),
 ):
-    if investigator.get("email") != "team@hexshield.go.ke":
+    if investigator.get("role") != "SYSTEM_ADMIN":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied. Only team@hexshield.go.ke is authorized.",
+            detail="Access denied. Only SYSTEM_ADMIN accounts are authorized.",
         )
     return investigator
 

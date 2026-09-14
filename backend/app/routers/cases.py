@@ -48,7 +48,9 @@ def create_case(
     payload: CaseCreatePayload,
     request: Request,
     db: Session = Depends(get_db),
-    current_investigator: dict = Depends(require_role("SYSTEM_ADMIN", "LEAD_INVESTIGATOR"))
+    current_investigator: dict = Depends(
+        require_role("LEAD_INVESTIGATOR", "FORENSIC_ANALYST")
+    )
 ):
     """
     Open a new forensic case container. 
@@ -76,11 +78,11 @@ def create_case(
     # 2. Verify Target Lead Investigator Existence and Operational Status
     target_investigator = db.execute(
         text("SELECT id, is_active FROM investigators WHERE id = :id"),
-        {"id": payload.lead_investigator_id},
+        {"id": current_investigator["id"]},
     ).fetchone()
     
     if not target_investigator:
-        error_msg = f"Assigned Lead Investigator with ID '{payload.lead_investigator_id}' does not exist."
+        error_msg = "The authenticated investigator does not exist."
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg)
         
     if not target_investigator.is_active:
@@ -113,7 +115,7 @@ def create_case(
                 "classification": payload.classification.upper(),
                 "jurisdiction": payload.jurisdiction,
                 "applicable_law": payload.applicable_law,
-                "lead_investigator_id": payload.lead_investigator_id,
+                "lead_investigator_id": current_investigator["id"],
                 "incident_location": payload.incident_location,
                 "incident_date": payload.incident_date,
                 "created_at": datetime.utcnow()
@@ -166,8 +168,13 @@ def list_cases(
                 i.full_name as lead_investigator_name, i.badge_number 
             FROM cases c
             LEFT JOIN investigators i ON CAST(c.lead_investigator_id AS TEXT) = CAST(i.id AS TEXT)
+            WHERE (:is_admin = TRUE OR c.lead_investigator_id = :investigator_id)
             ORDER BY c.created_at DESC
-        """)
+        """),
+        {
+            "is_admin": current_investigator["role"] == "SYSTEM_ADMIN",
+            "investigator_id": current_investigator["id"],
+        },
     ).mappings().all()
     
     cases_list = []
@@ -209,8 +216,13 @@ def get_case_by_id(
             FROM cases c
             LEFT JOIN investigators i ON CAST(c.lead_investigator_id AS TEXT) = CAST(i.id AS TEXT)
             WHERE c.id = :id
+              AND (:is_admin = TRUE OR c.lead_investigator_id = :investigator_id)
         """),
-        {"id": str(case_id)}
+        {
+            "id": str(case_id),
+            "is_admin": current_investigator["role"] == "SYSTEM_ADMIN",
+            "investigator_id": current_investigator["id"],
+        }
     ).mappings().fetchone()
 
     if not row:
@@ -280,7 +292,9 @@ def update_case_status(
     payload: CaseStatusUpdatePayload,
     request: Request,
     db: Session = Depends(get_db),
-    current_investigator: dict = Depends(require_role("SYSTEM_ADMIN", "LEAD_INVESTIGATOR"))
+    current_investigator: dict = Depends(
+        require_role("LEAD_INVESTIGATOR", "FORENSIC_ANALYST")
+    )
 ):
     """
     Modify operational case status states. Automatically sets closure windows for final verifications.

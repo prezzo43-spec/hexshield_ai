@@ -413,7 +413,9 @@ def get_hex_analysis_results(
 def trigger_ai_analysis(
     submission_id: str,
     db: Session = Depends(get_db),
-    current_investigator: dict = Depends(require_role("SYSTEM_ADMIN", "LEAD_INVESTIGATOR")),
+    current_investigator: dict = Depends(
+        require_role("LEAD_INVESTIGATOR", "FORENSIC_ANALYST")
+    ),
 ):
     """
     Trigger Layer 2 AI deepfake detection analysis on a submitted file.

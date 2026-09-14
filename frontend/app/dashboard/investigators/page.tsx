@@ -10,7 +10,6 @@ import { listInvestigators, createInvestigator } from "@/services/api";
 import { formatDate } from "@/types";
 
 const ROLES = [
-  "SYSTEM_ADMIN",
   "LEAD_INVESTIGATOR",
   "FORENSIC_ANALYST",
   "REVIEWING_OFFICER",

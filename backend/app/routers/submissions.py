@@ -30,7 +30,9 @@ async def submit_evidence(
     submission_notes: Optional[str] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_investigator: dict = Depends(require_role("SYSTEM_ADMIN", "LEAD_INVESTIGATOR", "INVESTIGATOR"))
+    current_investigator: dict = Depends(
+        require_role("LEAD_INVESTIGATOR", "FORENSIC_ANALYST")
+    )
 ):
     """
     Ingest structural digital evidence into an active case environment.
@@ -39,8 +41,12 @@ async def submit_evidence(
     """
     # 1. Validate Target Case Context
     case = db.execute(
-        text("SELECT id, status FROM cases WHERE id = :id"),
-        {"id": str(case_id)}
+                text("""
+                        SELECT id, status FROM cases
+                        WHERE id = :id
+                            AND lead_investigator_id = :investigator_id
+                """),
+                {"id": str(case_id), "investigator_id": current_investigator["id"]}
     ).fetchone()
     
     if not case:

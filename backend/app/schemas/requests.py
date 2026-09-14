@@ -23,7 +23,7 @@ class CaseCreatePayload(BaseModel):
     classification: Optional[str] = "CONFIDENTIAL"
     jurisdiction: Optional[str] = "Republic of Kenya"
     applicable_law: Optional[str] = None
-    lead_investigator_id: str
+    lead_investigator_id: Optional[str] = None
     incident_location: Optional[str] = None
     incident_date: Optional[date] = None
 

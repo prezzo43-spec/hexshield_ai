@@ -7,12 +7,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FolderOpen, Plus, Search, User } from "lucide-react";
-import { listCases, listInvestigators, createCase } from "@/services/api";
+import { listCases, createCase } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { CASE_STATUS_BG, formatDate } from "@/types";
 
 export default function CasesPage() {
+  const { investigator } = useAuth();
+  const canCreateCases = ["LEAD_INVESTIGATOR", "FORENSIC_ANALYST"].includes(
+    investigator?.role || ""
+  );
   const [cases, setCases] = useState<any[]>([]);
-  const [investigators, setInvestigators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -36,12 +40,8 @@ export default function CasesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [casesData, investData] = await Promise.all([
-        listCases(),
-        listInvestigators(),
-      ]);
+      const casesData = await listCases();
       setCases(casesData.cases || []);
-      setInvestigators(investData.investigators || []);
     } catch {
       setError("Failed to load data.");
     } finally {
@@ -70,8 +70,8 @@ export default function CasesPage() {
     setError("");
     setSuccess("");
 
-    if (!form.case_reference || !form.case_title || !form.lead_investigator_id) {
-      setError("Case reference, title, and lead investigator are required.");
+    if (!form.case_reference || !form.case_title) {
+      setError("Case reference and title are required.");
       return;
     }
 
@@ -84,7 +84,7 @@ export default function CasesPage() {
         case_reference: "",
         case_title: "",
         description: "",
-        lead_investigator_id: "",
+        lead_investigator_id: investigator?.id || "",
         jurisdiction: "Republic of Kenya",
         applicable_law: "Computer Misuse and Cybercrimes Act, 2018",
         classification: "CONFIDENTIAL",
@@ -119,13 +119,15 @@ export default function CasesPage() {
             Manage and track all active investigations
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowForm(!showForm)}
-        >
-          <Plus size={16} />
-          Open New Case
-        </button>
+        {canCreateCases && (
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(!showForm)}
+          >
+            <Plus size={16} />
+            Open New Case
+          </button>
+        )}
       </div>
 
       {error && (
@@ -200,21 +202,10 @@ export default function CasesPage() {
 
           <div className="form-row">
             <div className="form-group">
-              <label className="label">Lead Investigator *</label>
-              <select
-                className="input"
-                value={form.lead_investigator_id}
-                onChange={(e) =>
-                  setForm({ ...form, lead_investigator_id: e.target.value })
-                }
-              >
-                <option value="">Select investigator...</option>
-                {investigators.map((inv) => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.full_name} — {inv.organization}
-                  </option>
-                ))}
-              </select>
+              <label className="label">Case Owner</label>
+              <div className="input" style={{ color: "var(--muted)" }}>
+                {investigator?.full_name || "Authenticated investigator"}
+              </div>
             </div>
             <div className="form-group">
               <label className="label">Incident Date</label>

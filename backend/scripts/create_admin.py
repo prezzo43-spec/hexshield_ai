@@ -63,7 +63,7 @@ def create_system_admin() -> None:
             logger.warning("A SYSTEM_ADMIN account already exists:")
             logger.warning(f"  Name  : {existing[1]}")
             logger.warning(f"  Email : {existing[2]}")
-            logger.warning("To create another admin, use the application UI.")
+            logger.warning("Additional admins must be provisioned through this controlled script.")
             confirm = input("\nDo you want to create an additional admin? (yes/no): ")
             if confirm.lower() != "yes":
                 logger.info("Aborted.")

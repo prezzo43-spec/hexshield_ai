@@ -18,8 +18,11 @@ import {
 import Link from "next/link";
 import { listCases, listInvestigators, checkDetailedHealth } from "@/services/api";
 import { CASE_STATUS_BG, formatDate } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DashboardPage() {
+  const { investigator } = useAuth();
+  const isAdmin = investigator?.role === "SYSTEM_ADMIN";
   const [cases, setCases] = useState<any[]>([]);
   const [investigators, setInvestigators] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
@@ -28,7 +31,9 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([
       listCases().catch(() => ({ cases: [] })),
-      listInvestigators().catch(() => ({ investigators: [] })),
+      isAdmin
+        ? listInvestigators().catch(() => ({ investigators: [] }))
+        : Promise.resolve({ investigators: [] }),
       checkDetailedHealth().catch(() => null),
     ]).then(([casesData, investData, healthData]) => {
       setCases(casesData.cases || []);
@@ -36,7 +41,7 @@ export default function DashboardPage() {
       setHealth(healthData);
       setLoading(false);
     });
-  }, []);
+  }, [isAdmin]);
 
   const openCases = cases.filter((c) => c.status === "OPEN").length;
   const underAnalysis = cases.filter(
@@ -73,10 +78,12 @@ export default function DashboardPage() {
           </p>
         </div>
         <div style={{ display: "flex", gap: "0.75rem" }}>
-          <Link href="/dashboard/submit" className="btn btn-primary">
-            <Upload size={16} />
-            Submit Evidence
-          </Link>
+          {!isAdmin && (
+            <Link href="/dashboard/submit" className="btn btn-primary">
+              <Upload size={16} />
+              Submit Evidence
+            </Link>
+          )}
           <Link href="/dashboard/cases" className="btn btn-outline">
             <FolderOpen size={16} />
             View Cases
@@ -140,14 +147,16 @@ export default function DashboardPage() {
           <div className="stat-sub">Completed</div>
         </div>
 
-        <div className="stat-card">
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <Shield size={18} color="var(--accent)" />
-            <span className="stat-label">Investigators</span>
+        {isAdmin && (
+          <div className="stat-card">
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Shield size={18} color="var(--accent)" />
+              <span className="stat-label">Investigators</span>
+            </div>
+            <div className="stat-value">{investigators.length}</div>
+            <div className="stat-sub">Active analysts</div>
           </div>
-          <div className="stat-value">{investigators.length}</div>
-          <div className="stat-sub">Active analysts</div>
-        </div>
+        )}
       </div>
 
       {/* Recent Cases */}
@@ -282,43 +291,42 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        <Link
-          href="/dashboard/submit"
-          style={{ textDecoration: "none" }}
-        >
-          <div
-            className="card"
-            style={{
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "1rem",
-            }}
-          >
+        {!isAdmin && (
+          <Link href="/dashboard/submit" style={{ textDecoration: "none" }}>
             <div
+              className="card"
               style={{
-                width: 44,
-                height: 44,
-                background: "rgba(99, 102, 241, 0.1)",
-                borderRadius: 10,
+                cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                gap: "1rem",
               }}
             >
-              <Upload size={22} color="var(--secondary)" />
-            </div>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: "0.9375rem" }}>
-                Submit Evidence
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: "rgba(99, 102, 241, 0.1)",
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <Upload size={22} color="var(--secondary)" />
               </div>
-              <div style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
-                Upload files for forensic analysis
+              <div>
+                <div style={{ fontWeight: 600, fontSize: "0.9375rem" }}>
+                  Submit Evidence
+                </div>
+                <div style={{ fontSize: "0.8125rem", color: "var(--muted)" }}>
+                  Upload files for forensic analysis
+                </div>
               </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        )}
 
         <Link
           href="/dashboard/reports"

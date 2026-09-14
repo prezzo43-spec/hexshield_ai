@@ -12,7 +12,7 @@ import uuid
 
 from app.database import get_db
 from app.services.auth import hash_password, validate_password_strength
-from app.routers.auth import get_auth_investigator
+from app.routers.auth import get_auth_investigator, require_role
 
 router = APIRouter()
 
@@ -346,6 +346,9 @@ def deactivate_investigator(investigator_id: str, db: Session = Depends(get_db))
 def get_activity_logs(
     limit: int = 100,
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(
+        require_role("SYSTEM_ADMIN", "LEAD_INVESTIGATOR")
+    ),
 ):
     """
     Retrieve system activity logs for admin monitoring.

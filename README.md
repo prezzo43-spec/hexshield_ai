@@ -2,6 +2,10 @@
 
 HexShield AI is a digital forensic investigation platform designed to analyze suspicious file artifacts, detect manipulation in media content, and preserve evidence integrity through a formal chain-of-custody workflow. The repository combines a FastAPI backend, a Next.js dashboard, and a PostgreSQL-backed evidence model to support forensic triage, AI-assisted media analysis, and report generation.
 
+Refined academic project title:
+
+> **A Multi-Layered Digital Forensics Framework for Automated Evidence Analysis and Threat Detection**
+
 ---
 
 ## Executive Summary
@@ -361,6 +365,8 @@ The project is suitable for academic demonstration, technical walkthroughs, and 
 ## Academic and Research Context
 
 HexShield AI is designed to model a modern forensic investigation environment where binary analysis and AI-based media assessment are brought together under a legal and evidentiary workflow. It aligns with investigations involving suspicious file artifacts, manipulated media, cybercrime evidence handling, and contemporary digital forensic reporting practices.
+
+The academic research plan and evaluation protocol are documented in [docs/capstone-evaluation.md](docs/capstone-evaluation.md).
 
 ---
 

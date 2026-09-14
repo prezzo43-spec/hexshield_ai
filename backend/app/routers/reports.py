@@ -197,6 +197,7 @@ def generate_report(
         description="Optional examiner notes to include in the report",
     ),
     db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
 ):
     """
     Generate a forensic report for a file submission.
@@ -302,7 +303,7 @@ def generate_report(
             "storage_path": storage_path,
             "file_size_bytes": len(report_bytes),
             "report_hash": report_hash,
-            "generated_by": data["submission"]["submitted_by"],
+                "generated_by": current_investigator["id"],
             "covers_hex": data["submission"]["hex_analysis_complete"],
             "covers_ai": data["submission"]["ai_analysis_complete"],
             "covers_custody": True,
@@ -335,7 +336,11 @@ def generate_report(
 
 
 @router.get("/reports/{report_id}/download")
-def download_report(report_id: str, db: Session = Depends(get_db)):
+def download_report(
+    report_id: str,
+    db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
+):
     """
     Download a generated forensic report file.
     Verifies the file hash before serving.
@@ -393,7 +398,11 @@ def download_report(report_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/cases/{case_id}/reports")
-def list_case_reports(case_id: str, db: Session = Depends(get_db)):
+def list_case_reports(
+    case_id: str,
+    db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
+):
     """
     List all forensic reports generated for a case.
     """
@@ -441,7 +450,11 @@ def list_case_reports(case_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/reports/{report_id}")
-def get_report(report_id: str, db: Session = Depends(get_db)):
+def get_report(
+    report_id: str,
+    db: Session = Depends(get_db),
+    current_investigator: dict = Depends(get_auth_investigator),
+):
     """
     Retrieve metadata for a single forensic report.
     """

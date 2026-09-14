@@ -13,6 +13,7 @@ import {
   unlockInvestigator,
   deactivateInvestigator,
 } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDate } from "@/types";
 
 const ROLES = [
@@ -25,6 +26,8 @@ const ROLES = [
 ];
 
 export default function InvestigatorsPage() {
+  const { investigator } = useAuth();
+  const isAdmin = investigator?.role === "SYSTEM_ADMIN";
   const [investigators, setInvestigators] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -75,6 +78,12 @@ export default function InvestigatorsPage() {
   };
 
   useEffect(() => {
+    if (!isAdmin) {
+      setLoading(false);
+      setError("Access restricted. Only SYSTEM_ADMIN accounts can manage investigators.");
+      return;
+    }
+
     let isMounted = true;
 
     const load = async () => {
@@ -89,7 +98,20 @@ export default function InvestigatorsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <div className="empty-state" style={{ height: "60vh" }}>
+        <AlertTriangle size={40} className="empty-state-icon" />
+        <div>Investigator directory restricted</div>
+        <p style={{ color: "var(--muted)", maxWidth: 420 }}>
+          This area is limited to SYSTEM_ADMIN accounts. Your operational case
+          and evidence access remain available from the dashboard.
+        </p>
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     setError("");
